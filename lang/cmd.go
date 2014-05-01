@@ -2,8 +2,16 @@ package main
 
 import (
 	"os"
+	"fmt"
+	"log"
 )
 
 func main() {
-	f := os.Stdin
+	tokens, err := lex(os.Stdin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for t := range(tokens) {
+		fmt.Println(t)
+	}
 }
