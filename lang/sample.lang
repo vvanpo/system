@@ -1,0 +1,11 @@
+
+const byte a = 254
+
+h: func x, y, byte c -> z, r
+	z = x y + c /
+	r = x y + c %
+
+main:
+	b := 5 a +
+	b, _ = h(b, 10, c)
+
