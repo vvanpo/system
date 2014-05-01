@@ -3,15 +3,12 @@ package main
 import (
 	"os"
 	"fmt"
-	"log"
+	//"log"
 )
 
 func main() {
-	tokens, err := lex(os.Stdin)
-	if err != nil {
-		log.Fatal(err)
-	}
+	tokens := lex(os.Stdin)
 	for t := range(tokens) {
-		fmt.Println(t)
+		fmt.Printf("%#v\n", t)
 	}
 }
