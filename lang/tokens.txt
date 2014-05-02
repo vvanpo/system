@@ -1,0 +1,18 @@
+
+Indent, Dedent
+
+Keywords:
+	"byte", "word", "block", "const", "func", "...", "->", "jump", "return", "if"
+	
+Operators & Delimiters:
+	":", ":=", "=", "+", "-", "*", "/", "**", ",", "(", ")"
+
+Identifier = ( "_" | letter ), { "_" | letter | digit }
+Literal = decimal | binary | octal | hex
+	decimal = digit
+	binary = ( "0" | "1" )+, "b"
+	octal = ( "0" | ... | "7" )+, "o"
+	hex = ( digit | "a" | ... | "f" )+, "h"
+
+letter = "a" | ... | "z" |  "A" | ... | "Z"
+digit = "0" | ... | "9"
