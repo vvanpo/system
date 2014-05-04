@@ -6,6 +6,7 @@ h: func x, y, byte c -> z, r
 	r = x y + c %
 
 main:
-	b := 5 a +
+	b := 5 a +			# Any 'global' must be a constant?
+						# Why not just a preprocessor definition?
 	b, _ = h(b, 10, c)
 
