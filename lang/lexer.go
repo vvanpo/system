@@ -3,7 +3,8 @@ package main
 import (
 	"bufio"
 	"io"
-	//"strings"
+	"strings"
+	"strconv"
 	"log"
 	"unicode"
 	"unicode/utf8"
@@ -22,13 +23,13 @@ const (
 )
 
 var reserved = [...]string{
-	"byte", "block", "func", "jump", "return", "if",
+	"byte", "block", "func", "jump", "return", "if", "ref",
 }
 var operators = [...]string{
-	":", ":=", "=", "+", "-", "*", "/", "**", "(", ")",
+	":", ":=", "=", "+", "-", "*", "/", "**", "&", "|", "^", "!", "(",
 }
 var delimiters = [...]string{
-	",", "->",
+	",", "->", ")",
 }
 
 type token struct {
@@ -69,7 +70,7 @@ func (l *lexer) run(s *bufio.Scanner) {
 		l.start = 0
 		l.pos = 0
 		l.width = 0
-		for state := lexIndent; state != nil; {
+		for state := lexIndent; ; {
 			if !l.next() {
 				break
 			}
@@ -102,7 +103,6 @@ func (l *lexer) next() bool {
 // Call lexIndent at the beginning of a line
 func lexIndent(l *lexer) stateFn {
 	if !unicode.IsSpace(l.cur) {
-		l.start = l.pos
 		for i := range l.indent {
 			if l.indent[i] == l.pos {
 				if diff := len(l.indent) - 1 - i; diff != 0 {
@@ -131,59 +131,106 @@ func lexIndent(l *lexer) stateFn {
 }
 
 // lexLine determines which state function to call for current rune
+// Call lexLine after emitting a token
 func lexLine(l *lexer) stateFn {
+	l.start = l.pos
+	if unicode.IsSpace(l.cur) {
+		// Ignore whitespace
+		return lexLine
+	} else if unicode.IsDigit(l.cur) {
+		return lexLiteral(l)
+	} else if unicode.IsLetter(l.cur) || l.cur == '_' {
+		return lexIdentifier(l)
+	} else {
+		return lexOperator(l)
+	}
+}
+
+func (l *lexer) inList(t terminal, s []string) *token {
+	for _, k := range(s) {
+		if strings.HasPrefix(l.line[l.pos:], k) {
+			tok := new(token)
+			tok.terminal = t
+			tok.lexeme = l.line[l.pos:len(k)]
+			return tok
+		}
+	}
 	return nil
 }
 
-/*
+func lexOperator(l *lexer) stateFn {
+	var tok token
+	if t := l.inList(tOperator, operators[:]); t != nil {
+		tok = *t
+	} else if t := l.inList(tDelimiter, delimiters[:]); t != nil {
+		tok = *t
+	} else {
+		log.Fatal("Invalid operator")
+	}
+	l.pos += len(tok.lexeme)
+	l.width = 0
+	l.tokens <- tok
+	return lexLine
+}
 
 // lexIdentifier emits an identifier token or a reserved token, if the
 // identifier is a reserved keyword
 func lexIdentifier(l *lexer) stateFn {
-	if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
-		if l.pos == l.start + l.width {
-			log.Fatalf("Invalid identifer character: %v", r)
+	if !unicode.IsLetter(l.cur) && !unicode.IsDigit(l.cur) && l.cur != '_' {
+		tok := token{
+			terminal:	tIdentifier,
+			lexeme:		l.line[l.start:l.pos],
 		}
-		if unicode.IsSpace(r) || r == ':' || r == '=' || r == ',' || r == '(' || r == ')' {
-			val := l.input[l.start:(l.pos - l.width)]
-			for _, k := range(reserved) {
-				if val == k {
-					l.tokens <- token{ terminal: tReserved, attr: val }
-					l.start = l.pos - l.width
-					return lexSpace(l, r)
-				}
+		for _, k := range(reserved) {
+			if tok.lexeme == k {
+				tok.terminal = tReserved
 			}
-			l.tokens <- token{ terminal: tIdentifier, attr: val }
-			l.start = l.pos - l.width
-			return lexSpace(l, r)
+		}
+		if unicode.IsSpace(l.cur) || l.inList(tDelimiter, delimiters[:]) != nil {
+			l.tokens <- tok
+			return lexLine
+		} else {
+			log.Fatal("Invalid identifier")
 		}
 	}
-	if l.pos - l.width == l.start && unicode.IsDigit(r) {
-		return lexLiteral(l, r)
+	if l.pos + l.width >= len(l.line) {
+		l.next()
+		l.cur = ' '
+		return lexIdentifier(l)
 	}
 	return lexIdentifier
 }
 
-func lexLiteral(l *lexer, r rune) stateFn {
-	return nil
-}
-
-func lexSpace(l *lexer, r rune) stateFn {
-	l.start = l.pos - l.width
-	if unicode.IsSpace(r) {
-		if r == '\n' {
-			return lexIndent
+func lexLiteral(l *lexer) stateFn {
+	if !unicode.IsDigit(l.cur) {
+		str := l.line[l.start:l.pos]
+		tok := token{ terminal: tLiteral }
+		var err error
+		if l.cur == 'b' {
+			tok.num, err = strconv.ParseInt(str, 2, 64)
+		} else if l.cur == 'o' {
+			tok.num, err = strconv.ParseInt(str, 8, 64)
+		} else if l.cur == 'h' {
+			tok.num, err = strconv.ParseInt(str, 16, 64)
+		} else {
+			tok.num, err = strconv.ParseInt(str, 10, 64)
 		}
-		return lexSpace
+		if err != nil {
+			log.Fatal(err)
+		}
+		l.tokens <- tok
+		if l.next() {
+			if !unicode.IsSpace(l.cur) && l.inList(tDelimiter, delimiters[:]) == nil {
+				log.Fatal("Invalid literal")
+			}
+			return lexLine(l)
+		}
+		return lexLine
 	}
-	if unicode.IsDigit(r) {
-		return lexLiteral(l, r)
+	if l.pos + l.width >= len(l.line) {
+		l.next()
+		l.cur = ' '
+		return lexLiteral(l)
 	}
-	if unicode.IsLetter(r) || r == '_' {
-		return lexIdentifier(l, r)
-	}
-	return lexSpace
+	return lexLiteral
 }
-
-
-*/
