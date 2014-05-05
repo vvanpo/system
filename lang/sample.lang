@@ -1,12 +1,9 @@
 
-const byte a = 254
-
 h: func x, y, byte c -> z, r
 	z = x y + c /
 	r = x y + c %
 
 main:
-	b := 5 a +			# Any 'global' must be a constant?
-						# Why not just a preprocessor definition?
-	b, _ = h(b, 10, c)
+	b := 5 254 +
+	b, _ = (b, 10, c, h)
 

@@ -26,7 +26,7 @@ var reserved = [...]string{
 	"byte", "block", "func", "jump", "return", "if", "ref",
 }
 var operators = [...]string{
-	":", ":=", "=", "+", "-", "*", "/", "**", "&", "|", "^", "!", "(",
+	":", ":=", "=", "+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "(",
 }
 var delimiters = [...]string{
 	",", "->", ")",
@@ -147,24 +147,31 @@ func lexLine(l *lexer) stateFn {
 }
 
 func (l *lexer) inList(t terminal, s []string) *token {
+	var tok *token
 	for _, k := range(s) {
 		if strings.HasPrefix(l.line[l.pos:], k) {
-			tok := new(token)
+			if tok != nil && len(k) < len(tok.lexeme) {
+				continue
+			}
+			tok = new(token)
 			tok.terminal = t
-			tok.lexeme = l.line[l.pos:len(k)]
-			return tok
+			tok.lexeme = l.line[l.pos:(l.pos + len(k))]
 		}
 	}
-	return nil
+	return tok
 }
 
 func lexOperator(l *lexer) stateFn {
 	var tok token
 	if t := l.inList(tOperator, operators[:]); t != nil {
 		tok = *t
-	} else if t := l.inList(tDelimiter, delimiters[:]); t != nil {
-		tok = *t
-	} else {
+	}
+	if t := l.inList(tDelimiter, delimiters[:]); t != nil {
+		if len(t.lexeme) > len(tok.lexeme) {
+			tok = *t
+		}
+	}
+	if tok.lexeme == "" {
 		log.Fatal("Invalid operator")
 	}
 	l.pos += len(tok.lexeme)
@@ -186,9 +193,9 @@ func lexIdentifier(l *lexer) stateFn {
 				tok.terminal = tReserved
 			}
 		}
-		if unicode.IsSpace(l.cur) || l.inList(tDelimiter, delimiters[:]) != nil {
+		if unicode.IsSpace(l.cur) || l.inList(tDelimiter, delimiters[:]) != nil || l.cur == ':' || l.cur == '=' {
 			l.tokens <- tok
-			return lexLine
+			return lexLine(l)
 		} else {
 			log.Fatal("Invalid identifier")
 		}
@@ -219,7 +226,7 @@ func lexLiteral(l *lexer) stateFn {
 			log.Fatal(err)
 		}
 		l.tokens <- tok
-		if l.next() {
+		if (l.cur == 'b' || l.cur == 'o' || l.cur == 'h') && l.next() {
 			if !unicode.IsSpace(l.cur) && l.inList(tDelimiter, delimiters[:]) == nil {
 				log.Fatal("Invalid literal")
 			}
