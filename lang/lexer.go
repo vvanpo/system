@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"io"
-	"io/ioutil"
-	"strings"
+	//"strings"
 	"log"
 	"unicode"
 	"unicode/utf8"
@@ -22,104 +22,124 @@ const (
 )
 
 var reserved = [...]string{
-	"const", "byte", "block", "func", "...", "->", "jump", "return", "if",
+	"byte", "block", "func", "jump", "return", "if",
 }
 var operators = [...]string{
 	":", ":=", "=", "+", "-", "*", "/", "**", "(", ")",
 }
 var delimiters = [...]string{
-	",",
+	",", "->",
 }
 
 type token struct {
 	terminal
-	attr string
-	num int64
+	lexeme string
+	num    int64
 }
 
-type stateFn func(*lexer, rune) stateFn
+type stateFn func(*lexer) stateFn
 
 type lexer struct {
-	input		string
+	line        string // Current line
 	tokens      chan token
 	indent      []int
 	indent_rune rune
-	start		int
-	pos			int
-	width		int
+	start       int  // Start of current token
+	pos         int  // Start of current rune
+	cur         rune // Rune pointed to by pos
+	width       int  // Width of cur
 }
 
+// lex initializes goroutine to lex input and returns token channel
+// When channel closes, we've reached EOF
 func lex(r io.Reader) chan token {
-	input, err := ioutil.ReadAll(r)
-	if err != nil {
-		log.Fatal("Input error")
-	}
 	l := &lexer{
-		input:	string(input),
 		tokens: make(chan token),
 		indent: []int{0},
 	}
-	go func() {
-		defer close(l.tokens)
-		for state := lexIndent; state != nil && l.pos < len(input); {
-			n := l.next()
-			if n == '#' {
-				p := strings.IndexRune(l.input[l.pos:], '\n')
-				if p == -1 { return }
-				n = '\n'
-				l.pos = p
-				l.start = p
-			}
-			state = state(l, n)
-		}
-	}()
+	go l.run(bufio.NewScanner(r))
 	return l.tokens
 }
 
-func (l *lexer) next() (r rune) {
-	r, s := utf8.DecodeRuneInString(l.input[l.pos:])
+// *lexer.run lexes entire file line-by-line
+func (l *lexer) run(s *bufio.Scanner) {
+	defer close(l.tokens)
+	for s.Scan() {
+		l.line = s.Text()
+		l.start = 0
+		l.pos = 0
+		l.width = 0
+		for state := lexIndent; state != nil; {
+			if !l.next() {
+				break
+			}
+			state = state(l)
+		}
+	}
+	if s.Err() != nil {
+		log.Fatal("Input error")
+	}
+}
+
+// *lexer.next updates *lexer values and returns true if there is a valid rune to lex
+func (l *lexer) next() bool {
+	l.pos += l.width
+	if l.pos >= len(l.line) {
+		return false
+	}
+	r, s := utf8.DecodeRuneInString(l.line[l.pos:])
 	l.width = s
-	l.pos += s
+	if r == '#' {
+		return false
+	}
 	if r == '\ufffd' && s == 1 {
 		log.Fatal("Invalid input encoding")
 	}
-	return
+	l.cur = r
+	return true
 }
 
-// Call lexIndent after a '\n'
-func lexIndent(l *lexer, r rune) stateFn {
-	if !unicode.IsSpace(r) {
-		indent := l.start - l.pos - l.width
-		for i := range(l.indent) {
-			if l.indent[i] == indent {
+// Call lexIndent at the beginning of a line
+func lexIndent(l *lexer) stateFn {
+	if !unicode.IsSpace(l.cur) {
+		l.start = l.pos
+		for i := range l.indent {
+			if l.indent[i] == l.pos {
 				if diff := len(l.indent) - 1 - i; diff != 0 {
+					l.indent = l.indent[:i+1]
 					for j := 0; j < diff; j++ {
-						l.tokens <- token{ terminal: tDedent }
+						l.tokens <- token{terminal: tDedent}
 					}
 				}
-			} else if l.indent[i] > indent {
+				return lexLine(l)
+			} else if l.indent[i] > l.pos {
 				log.Fatal("Indentation mismatch")
-			} else {
-				l.indent = append(l.indent, indent)
-				l.tokens <- token{ terminal: tIndent }
 			}
-			l.start = l.pos - l.width
-			return lexIdentifier(l, r)
 		}
+		l.indent = append(l.indent, l.pos)
+		l.tokens <- token{terminal: tIndent}
+		return lexLine(l)
 	}
-	if r == '\n' {
-		l.start = l.pos
-	} else if r != '\t' && r != ' ' {
+	if l.cur != '\t' && l.cur != ' ' {
 		log.Fatal("Invalid indentation character")
 	} else if l.indent_rune == 0 {
-		l.indent_rune = r
-	} else if r != l.indent_rune {
+		l.indent_rune = l.cur
+	} else if l.cur != l.indent_rune {
 		log.Fatal("Mixing tabs and spaces for indentation")
 	}
 	return lexIndent
 }
 
-func lexIdentifier(l *lexer, r rune) stateFn {
+// lexLine determines which state function to call for current rune
+func lexLine(l *lexer) stateFn {
+	return nil
+}
+
+/*
+
+// lexIdentifier emits an identifier token or a reserved token, if the
+// identifier is a reserved keyword
+func lexIdentifier(l *lexer) stateFn {
 	if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
 		if l.pos == l.start + l.width {
 			log.Fatalf("Invalid identifer character: %v", r)
@@ -164,3 +184,6 @@ func lexSpace(l *lexer, r rune) stateFn {
 	}
 	return lexSpace
 }
+
+
+*/
