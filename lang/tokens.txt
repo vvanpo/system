@@ -1,14 +1,17 @@
 
-Indent, Dedent
+indent, dedent
 
-Keywords:
-	"byte", "word", "block", "const", "func", "...", "->", "jump", "return", "if"
+keyword =
+	"byte", "block", "func", "jump", "return", "if", "ref"
 	
-Operators & Delimiters:
-	":", ":=", "=", "+", "-", "*", "/", "**", ",", "(", ")"
+operator =
+	":", ":=", "=", "+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "("
 
-Identifier = ( "_" | letter ), { "_" | letter | digit }
-Literal = decimal | binary | octal | hex
+delimiter =
+	",", "->", ")"
+
+identifier = ( "_" | letter ), { "_" | letter | digit }
+literal = decimal | binary | octal | hex
 	decimal = digit
 	binary = ( "0" | "1" )+, "b"
 	octal = ( "0" | ... | "7" )+, "o"

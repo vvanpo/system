@@ -1,0 +1,25 @@
+
+file = { stmt }
+stmt = simple_stmt | compound_stmt
+compound_stmt = label, ( func_def | if_stmt | block )
+	label = identifier, ":"
+	func_def = "func", [ params ], [ "->", params ], block
+	if_stmt = "if", expr, block
+	block = indent, file, dedent
+	param = [ type ], identifier, { ",", [ type ], identifier }
+	type = "byte" | ( "block", literal )
+simple_stmt = [ label ], ( assign_stmt
+							| label_stmt
+							| reassign_stmt
+							| jump_stmt
+							| return_stmt )
+	assign_stmt = param, ":=", expr
+	label_stmt = param, ":", expr
+	reassign_stmt = identifier, { ",", identifier }, "=" expr
+	jump_stmt = "jump", expr
+	return_stmt = "return"
+
+expr = expr, { expr }, operator | func_call | identifier | literal
+
+func_call = "(", { expr }, identifier, ")"
+

@@ -146,6 +146,8 @@ func lexLine(l *lexer) stateFn {
 	}
 }
 
+// inList returns a token (without updating *lexer indices) when l.start matches
+// a prefix string in the input list
 func (l *lexer) inList(t terminal, s []string) *token {
 	var tok *token
 	for _, k := range(s) {
@@ -161,6 +163,8 @@ func (l *lexer) inList(t terminal, s []string) *token {
 	return tok
 }
 
+// lexOperator grabs the longest match in the 'operators' and 'delimiters' lists,
+// and emits a token
 func lexOperator(l *lexer) stateFn {
 	var tok token
 	if t := l.inList(tOperator, operators[:]); t != nil {
