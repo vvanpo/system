@@ -258,11 +258,18 @@ func (p *parser) parseParam() bool {
 
 func (p *parser) parseAssign_stmt() bool {
 	root := p.cur
+	tIndex := p.tIndex
 	defer func() { p.cur = root }()
 	if !p.parseParam() { return false }
 	param := p.cur
-	if t, ok := p.getToken(0); !ok || t.lexeme != ":=" { return false }
-	if !p.parseExpr() { return false }
+	if t, ok := p.getToken(0); !ok || t.lexeme != ":=" {
+		p.tIndex = tIndex
+		return false
+	}
+	if !p.parseExpr() {
+		p.tIndex = tIndex
+		return false
+	}
 	p.tIndex++
 	root.addChild(param)
 	root.addChild(p.cur)
@@ -272,11 +279,18 @@ func (p *parser) parseAssign_stmt() bool {
 
 func (p *parser) parseLabel_stmt() bool {
 	root := p.cur
+	tIndex := p.tIndex
 	defer func() { p.cur = root }()
 	if !p.parseParam() { return false }
 	param := p.cur
-	if t, ok := p.getToken(0); !ok || t.lexeme != ":" { return false }
-	if !p.parseExpr() { return false }
+	if t, ok := p.getToken(0); !ok || t.lexeme != ":" {
+		p.tIndex = tIndex
+		return false
+	}
+	if !p.parseExpr() {
+		p.tIndex = tIndex
+		return false
+	}
 	p.tIndex++
 	root.addChild(param)
 	root.addChild(p.cur)
@@ -339,17 +353,18 @@ func (p *parser) parseReturn_stmt() bool {
 }
 
 func (p *parser) parseExpr() bool {
-	nodes := make([]*node, 1)
+	nodes := make([]*node, 0)
+	tIndex := p.tIndex
 	subExpr := -1
-	i := 0
+	funcCall := -1
 	for {
-		t, ok := p.getToken(i)
+		t, ok := p.getToken(0)
 		if !ok { break }
+		p.tIndex++
 		if t.lexeme == "(" {
-			p.tIndex += i
 			p.parseFunc_call()
 			nodes = append(nodes, p.cur)
-			p.tIndex -= i
+			funcCall++
 			continue
 		}
 		if t.terminal == tIdentifier {
@@ -358,38 +373,44 @@ func (p *parser) parseExpr() bool {
 			nodes = append(nodes, &node{ token: t })
 		} else if t.terminal == tOperator {
 			n := 2
-			if t.lexeme != "!" { n = 1 }
+			if t.lexeme == "!" { n = 1 }
 			if len(nodes) < n {
 				log.Fatal("Invalid expression, not enough arguments")
 			}
-			root := &node{ nonterm: nExpr }
+			root := &node{
+				nonterm: nExpr,
+				token:		t,
+			}
 			for j := 0; j < n; j++ {
 				root.addChild(nodes[len(nodes) - 1])
 				nodes = nodes[:len(nodes) - 1]
 			}
 			subExpr = len(nodes)
 			nodes = append(nodes, root)
-			p.tIndex += i
-			i = 0
 			continue
 		} else {
+			p.tIndex--
 			break
 		}
-		i++
 	}
-	if subExpr != 0 {
-		if subExpr == -1 {
-			return false
-		} else if len(nodes) == 1 {
+	if subExpr == -1 && funcCall == -1 {
+		if len(nodes) >= 1 {
 			root := &node{ nonterm: nExpr }
 			root.addChild(nodes[0])
-			nodes[0] = root
+			p.tIndex -= len(nodes) - 1
+			p.cur = root
+			return true
 		} else {
-			log.Fatal("Invalid expression, missing operator")
+			p.tIndex = tIndex
+			return false
 		}
+	} else if subExpr == 0 {
+		p.tIndex -= len(nodes) - 1
+		p.cur = nodes[0]
+		return true
 	}
-	p.cur = nodes[0]
-	return true
+	p.parseErr(p.list[tIndex], "Invalid expression")
+	return false
 }
 
 func (p *parser) parseFunc_call() bool {

@@ -30,7 +30,7 @@ func printChild(n *node, indent int) {
 	} else {
 		val = n.token.lexeme
 	}
-	fmt.Printf("%s%d: %s", t, n.nonterm, val)
+	fmt.Printf("%s%d: %s\n", t, n.nonterm, val)
 	for i := range(n.child) {
 		printChild(n.child[i], indent+1)
 	}
