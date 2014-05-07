@@ -239,3 +239,16 @@ func (p *parser) parseParam() bool {
 	return true
 }
 
+func (p *parser) parseAssign_stmt() bool {
+	root := p.cur
+	defer func() { p.cur = root }()
+	if !parseParam() { return false }
+	param := p.cur
+	if t, ok := p.getToken(0); !ok || t.lexeme != ":=" { return false }
+	p.list = p.list[1:]
+	if !parseExpr() { return false }
+	root.addChild(param)
+	root.addChild(p.cur)
+	root.nonterm = nAssign_stmt
+	return true
+}
