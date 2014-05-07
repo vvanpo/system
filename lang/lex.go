@@ -36,12 +36,15 @@ type token struct {
 	terminal
 	lexeme string
 	num    int64
+	line	int
+	col		int
 }
 
 type stateFn func(*lexer) stateFn
 
 type lexer struct {
 	line        string // Current line
+	lineNum		int
 	tokens      chan token
 	indent      []int
 	indent_rune rune
@@ -67,6 +70,7 @@ func (l *lexer) run(s *bufio.Scanner) {
 	defer close(l.tokens)
 	for s.Scan() {
 		l.line = s.Text()
+		l.lineNum++
 		l.start = 0
 		l.pos = 0
 		l.width = 0
@@ -80,6 +84,12 @@ func (l *lexer) run(s *bufio.Scanner) {
 	if s.Err() != nil {
 		log.Fatal("Input error")
 	}
+}
+
+func (l *lexer) emit(t token) {
+	t.line = l.lineNum
+	t.col = l.start
+	l.tokens <- t
 }
 
 // *lexer.next updates *lexer values and returns true if there is a valid rune to lex
@@ -108,7 +118,7 @@ func lexIndent(l *lexer) stateFn {
 				if diff := len(l.indent) - 1 - i; diff != 0 {
 					l.indent = l.indent[:i+1]
 					for j := 0; j < diff; j++ {
-						l.tokens <- token{terminal: tDedent}
+						l.emit(token{terminal: tDedent})
 					}
 				}
 				return lexLine(l)
@@ -117,7 +127,7 @@ func lexIndent(l *lexer) stateFn {
 			}
 		}
 		l.indent = append(l.indent, l.pos)
-		l.tokens <- token{terminal: tIndent}
+		l.emit(token{terminal: tIndent})
 		return lexLine(l)
 	}
 	if l.cur != '\t' && l.cur != ' ' {
@@ -176,11 +186,11 @@ func lexOperator(l *lexer) stateFn {
 		}
 	}
 	if tok.lexeme == "" {
-		log.Fatal("Invalid operator")
+		log.Fatal("Invalid operator or delimiter")
 	}
 	l.pos += len(tok.lexeme)
 	l.width = 0
-	l.tokens <- tok
+	l.emit(tok)
 	return lexLine
 }
 
@@ -198,7 +208,7 @@ func lexIdentifier(l *lexer) stateFn {
 			}
 		}
 		if unicode.IsSpace(l.cur) || l.inList(tDelimiter, delimiters[:]) != nil || l.cur == ':' || l.cur == '=' {
-			l.tokens <- tok
+			l.emit(tok)
 			return lexLine(l)
 		} else {
 			log.Fatal("Invalid identifier")
@@ -229,7 +239,7 @@ func lexLiteral(l *lexer) stateFn {
 		if err != nil {
 			log.Fatal(err)
 		}
-		l.tokens <- tok
+		l.emit(tok)
 		if (l.cur == 'b' || l.cur == 'o' || l.cur == 'h') && l.next() {
 			if !unicode.IsSpace(l.cur) && l.inList(tDelimiter, delimiters[:]) == nil {
 				log.Fatal("Invalid literal")

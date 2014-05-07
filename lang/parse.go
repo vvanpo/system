@@ -36,8 +36,12 @@ type node struct{
 	parent	*node
 	child	[]*node
 	nonterm
-	value	int64
-	symbol	string
+	token
+}
+
+func (p *parser) parseErr(t token, err string) {
+	log.Fatalf("Parsing error at Line %d, Col %d:\n\t%s", t.line, t.col, err)
+	return
 }
 
 func parse(tokens chan token) *node {
@@ -54,6 +58,7 @@ func parse(tokens chan token) *node {
 func (p *parser) nextToken() bool {
 	t, ok := <-p.tokens
 	if !ok { return false }
+	printToken(t)
 	p.list = append(p.list, t)
 	return true
 }
@@ -118,7 +123,7 @@ func (p *parser) parseStmt() bool {
 	}
 	// If the statement was invalid, check if a label was parsed
 	if len(root.child) > 0 {
-		log.Fatal("Invalid statement")
+		p.parseErr(root.child[0].token, "Invalid statement")
 	}
 	p.cur = saved
 	return false
@@ -130,7 +135,7 @@ func (p *parser) parseLabel() bool {
 			p.cur = &node{
 				parent:		p.cur,
 				nonterm:	nLabel,
-				symbol:		t.lexeme,
+				token:		t,
 			}
 			p.list = p.list[2:]
 			return true
@@ -168,16 +173,17 @@ func (p *parser) parseFunc_def() bool {
 }
 
 func (p *parser) parseBlock() bool {
-	if t, ok := p.getToken(0); !ok || t.terminal != tIndent {
+	t, ok := p.getToken(0)
+	if !ok || t.terminal != tIndent {
 		return false
 	}
 	p.list = p.list[1:]
 	p.cur.nonterm = nBlock
 	if !p.parseFile() {
-		log.Fatal("Invalid block statement")
+		p.parseErr(t, "Invalid block statement")
 	}
-	if t, ok := p.getToken(0); !ok || t.terminal != tDedent {
-		log.Fatal("Invalid block statement")
+	if t, ok := p.getToken(0); ok && t.terminal != tDedent {
+		p.parseErr(t, "Invalid block statement")
 	}
 	p.list = p.list[1:]
 	return true
@@ -214,11 +220,11 @@ func (p *parser) parseParam() bool {
 		}
 		if t.terminal == tReserved {
 			if t.lexeme == "byte" {
-				root.addChild(&node{ nonterm: nType, value: 0 })
+				root.addChild(&node{ nonterm: nType, token: t })
 				p.list = p.list[1:]
 			} else if t.lexeme == "block" {
 				if t, ok := p.getToken(1); ok && t.terminal == tLiteral {
-					root.addChild(&node{ nonterm: nType, value: t.num })
+					root.addChild(&node{ nonterm: nType, token: t })
 					p.list = p.list[2:]
 				} else {
 					log.Fatal("Invalid block-typed parameter")
@@ -229,7 +235,7 @@ func (p *parser) parseParam() bool {
 				log.Fatal("Invalid parameter")
 			}
 		}
-		root.addChild(&node{ symbol: t.lexeme })
+		root.addChild(&node{ token: t })
 		p.list = p.list[1:]
 		return true
 	}
@@ -283,7 +289,7 @@ func (p *parser) parseReassign_stmt() bool {
 	parseSingle := func() bool {
 		t, ok := p.getToken(0)
 		if !ok || t.terminal != tIdentifier { return false }
-		root.addChild(&node{ symbol: t.lexeme })
+		root.addChild(&node{ token: t })
 		p.list = p.list[1:]
 		return true
 	}
@@ -346,9 +352,9 @@ func (p *parser) parseExpr() bool {
 			continue
 		}
 		if t.terminal == tIdentifier {
-			nodes = append(nodes, &node{ symbol: t.lexeme })
+			nodes = append(nodes, &node{ token: t })
 		} else if t.terminal == tLiteral {
-			nodes = append(nodes, &node{ value: t.num })
+			nodes = append(nodes, &node{ token: t })
 		} else if t.terminal == tOperator {
 			n := 2
 			if t.lexeme != "!" { n = 1 }
@@ -392,7 +398,7 @@ func (p *parser) parseFunc_call() bool {
 	for p.parseExpr() {
 		root.addChild(p.cur)
 	}
-	if len(root.child) == 0 || root.child[len(root.child) - 1].symbol == "" {
+	if len(root.child) == 0 || root.child[len(root.child) - 1].token.lexeme == "" {
 		log.Fatal("Invalid function call: no identifier")
 	}
 	if t, ok := p.getToken(0); !ok || t.lexeme != ")" {
