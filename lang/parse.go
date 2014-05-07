@@ -234,7 +234,16 @@ func (p *parser) parseParam() bool {
 		return true
 	}
 	if !parseSingle() { return false }
-	for parseSingle() {}
+	for {
+		if t, ok := p.getToken(0); ok && t.lexeme == "," {
+			p.list = p.list[1:]
+			if !parseSingle() {
+				log.Fatal("Invalid parameter list")
+			}
+		} else {
+			break
+		}
+	}
 	p.cur = root
 	return true
 }
@@ -245,10 +254,56 @@ func (p *parser) parseAssign_stmt() bool {
 	if !parseParam() { return false }
 	param := p.cur
 	if t, ok := p.getToken(0); !ok || t.lexeme != ":=" { return false }
-	p.list = p.list[1:]
 	if !parseExpr() { return false }
+	p.list = p.list[1:]
 	root.addChild(param)
 	root.addChild(p.cur)
 	root.nonterm = nAssign_stmt
+	return true
+}
+
+func (p *parser) parseLabel_stmt() bool {
+	root := p.cur
+	defer func() { p.cur = root }()
+	if !parseParam() { return false }
+	param := p.cur
+	if t, ok := p.getToken(0); !ok || t.lexeme != ":" { return false }
+	if !parseExpr() { return false }
+	p.list = p.list[1:]
+	root.addChild(param)
+	root.addChild(p.cur)
+	root.nonterm = nLabel_stmt
+	return true
+}
+
+
+func (p *parser) parseReassign_stmt() bool {
+	root := p.cur
+	defer func() { p.cur = root }()
+	parseSingle := func() bool {
+		if t, ok := p.getToken(0); !ok || t.terminal != tIdentifier { return false }
+		root.addChild(&node{ symbol: t.lexeme })
+		p.list = p.list[1:]
+		return true
+	}
+	if !parseSingle() { return false }
+	for {
+		if t, ok := p.getToken(0); ok && t.lexeme == "," {
+			p.list = p.list[1:]
+			if !parseSingle() {
+				log.Fatal("Invalid parameter list")
+			}
+		} else {
+			break
+		}
+	}
+	if t, ok := p.getToken(0); !ok || t.lexeme != "=" {
+		log.Fatal("Invalid assignment statement")
+	}
+	p.list = p.list[1:]
+	if !parseExpr() {
+		log.Fatal("Invalid assignment statement")
+	}
+	root.addChild(p.cur)
 	return true
 }
