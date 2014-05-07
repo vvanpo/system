@@ -251,10 +251,10 @@ func (p *parser) parseParam() bool {
 func (p *parser) parseAssign_stmt() bool {
 	root := p.cur
 	defer func() { p.cur = root }()
-	if !parseParam() { return false }
+	if !p.parseParam() { return false }
 	param := p.cur
 	if t, ok := p.getToken(0); !ok || t.lexeme != ":=" { return false }
-	if !parseExpr() { return false }
+	if !p.parseExpr() { return false }
 	p.list = p.list[1:]
 	root.addChild(param)
 	root.addChild(p.cur)
@@ -265,10 +265,10 @@ func (p *parser) parseAssign_stmt() bool {
 func (p *parser) parseLabel_stmt() bool {
 	root := p.cur
 	defer func() { p.cur = root }()
-	if !parseParam() { return false }
+	if !p.parseParam() { return false }
 	param := p.cur
 	if t, ok := p.getToken(0); !ok || t.lexeme != ":" { return false }
-	if !parseExpr() { return false }
+	if !p.parseExpr() { return false }
 	p.list = p.list[1:]
 	root.addChild(param)
 	root.addChild(p.cur)
@@ -281,7 +281,8 @@ func (p *parser) parseReassign_stmt() bool {
 	root := p.cur
 	defer func() { p.cur = root }()
 	parseSingle := func() bool {
-		if t, ok := p.getToken(0); !ok || t.terminal != tIdentifier { return false }
+		t, ok := p.getToken(0)
+		if !ok || t.terminal != tIdentifier { return false }
 		root.addChild(&node{ symbol: t.lexeme })
 		p.list = p.list[1:]
 		return true
@@ -301,9 +302,104 @@ func (p *parser) parseReassign_stmt() bool {
 		log.Fatal("Invalid assignment statement")
 	}
 	p.list = p.list[1:]
-	if !parseExpr() {
+	if !p.parseExpr() {
 		log.Fatal("Invalid assignment statement")
 	}
 	root.addChild(p.cur)
+	root.nonterm = nReassign_stmt
 	return true
 }
+
+func (p *parser) parseJump_stmt() bool {
+	if t, ok := p.getToken(0); !ok || t.lexeme != "jump" { return false }
+	p.list = p.list[1:]
+	root := p.cur
+	if !p.parseExpr() {
+		log.Fatal("Invalid jump statement")
+	}
+	root.addChild(p.cur)
+	root.nonterm = nJump_stmt
+	p.cur = root
+	return true
+}
+
+func (p *parser) parseReturn_stmt() bool {
+	if t, ok := p.getToken(0); !ok || t.lexeme != "return" { return false }
+	p.list = p.list[1:]
+	p.cur.nonterm = nReturn_stmt
+	return true
+}
+
+func (p *parser) parseExpr() bool {
+	nodes := make([]*node, 1)
+	subExpr := -1
+	i := 0
+	for {
+		t, ok := p.getToken(i)
+		if !ok { break }
+		if t.lexeme == "(" {
+			tmp := p.list[:i]
+			p.list = p.list[i:]
+			p.parseFunc_call()
+			nodes = append(nodes, p.cur)
+			p.list = append(tmp, p.list...)
+			continue
+		}
+		if t.terminal == tIdentifier {
+			nodes = append(nodes, &node{ symbol: t.lexeme })
+		} else if t.terminal == tLiteral {
+			nodes = append(nodes, &node{ value: t.num })
+		} else if t.terminal == tOperator {
+			n := 2
+			if t.lexeme != "!" { n = 1 }
+			if len(nodes) < n {
+				log.Fatal("Invalid expression, not enough arguments")
+			}
+			root := &node{ nonterm: nExpr }
+			for j := 0; j < n; j++ {
+				root.addChild(nodes[len(nodes) - 1])
+				nodes = nodes[:len(nodes) - 1]
+			}
+			subExpr = len(nodes)
+			nodes = append(nodes, root)
+			p.list = p.list[i:]
+			i = 0
+			continue
+		} else {
+			break
+		}
+		i++
+	}
+	if subExpr != 0 {
+		if subExpr == -1 {
+			return false
+		} else if len(nodes) == 1 {
+			root := &node{ nonterm: nExpr }
+			root.addChild(nodes[0])
+			nodes[0] = root
+		} else {
+			log.Fatal("Invalid expression, missing operator")
+		}
+	}
+	p.cur = nodes[0]
+	return true
+}
+
+func (p *parser) parseFunc_call() bool {
+	if t, ok := p.getToken(0); !ok || t.lexeme != "(" { return false }
+	p.list = p.list[1:]
+	root := &node{ nonterm: nFunc_call }
+	for p.parseExpr() {
+		root.addChild(p.cur)
+	}
+	if len(root.child) == 0 || root.child[len(root.child) - 1].symbol == "" {
+		log.Fatal("Invalid function call: no identifier")
+	}
+	if t, ok := p.getToken(0); !ok || t.lexeme != ")" {
+		log.Fatal("Invalid function call")
+	}
+	p.list = p.list[1:]
+	p.cur = root
+	return true
+}
+

@@ -5,10 +5,13 @@ keyword =
 	"byte", "block", "func", "jump", "return", "if", "ref"
 	
 operator =
-	":", ":=", "=", "+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "<<", ">>", "|>>", "("
+	"+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "<<", ">>", "|>>"
 
 delimiter =
 	",", "->", ")"
+
+other =
+	":", ":=", "=", "("
 
 identifier = ( "_" | letter ), { "_" | letter | digit }
 literal = decimal | binary | octal | hex
@@ -17,5 +20,5 @@ literal = decimal | binary | octal | hex
 	octal = ( "0" | ... | "7" )+, "o"
 	hex = ( digit | "a" | ... | "f" )+, "h"
 
-letter = "a" | ... | "z" |  "A" | ... | "Z"
+letter = "a" | ... | "z" | "A" | ... | "Z"
 digit = "0" | ... | "9"
