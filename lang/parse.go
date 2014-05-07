@@ -40,15 +40,15 @@ type node struct{
 	symbol	string
 }
 
-func parse(tokens chan token) {
+func parse(tokens chan token) *node {
 	p := parser{
 		tokens:	tokens,
 		tree:	new(node),
 	}
 	p.tree.parent = p.tree
 	p.cur = p.tree
-	go p.parseFile()
-	return
+	p.parseFile()
+	return p.tree
 }
 
 func (p *parser) nextToken() bool {

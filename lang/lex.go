@@ -26,10 +26,10 @@ var reserved = [...]string{
 	"byte", "block", "func", "jump", "return", "if", "ref",
 }
 var operators = [...]string{
-	":", ":=", "=", "+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "(",
+	"+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "<<", ">>",
 }
 var delimiters = [...]string{
-	",", "->", ")",
+	":", ":=", "=", ",", "->", "(", ")",
 }
 
 type token struct {
