@@ -30,6 +30,10 @@ type parser struct {
 	tIndex int
 	tree   *node
 	cur    *node
+	sym		map[string]struct{
+		size	int
+		*node
+	}
 }
 
 type node struct {
@@ -42,6 +46,16 @@ type node struct {
 func (p *parser) parseErr(t token, err string) {
 	log.Fatalf("Parsing error at Line %d, Col %d:\n\t%s", t.line, t.col, err)
 	return
+}
+
+func (p *parser) addSymbol(n *node) {
+	sym := n.token.lexeme
+	//sym = fmt.Sprintf("%s.%s", , sym)
+	if _, ok := p.sym[sym] {
+		p.parseErr(n.token, fmt.Sprintf("Redeclared symbol '%s'", sym))
+	}
+	size := 8
+	p.sym[sym] = struct{ size, n }
 }
 
 func parse(tokens chan token) *node {
@@ -142,6 +156,7 @@ func (p *parser) parseLabel() bool {
 				token:   t,
 			}
 			p.tIndex += 2
+			p.addSymbol(t.lexeme, p.cur)
 			return true
 		}
 	}
