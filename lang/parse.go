@@ -95,6 +95,7 @@ func (p *parser) parseFile() bool {
 func (p *parser) parseStmt() bool {
 	saved := p.cur
 	root := new(node)
+	p.cur = root
 	if p.parseLabel() {
 		root.addChild(p.cur)
 		// The parse<stmt> methods assume p.cur is the stmt root
@@ -119,7 +120,6 @@ func (p *parser) parseStmt() bool {
 		}
 	}
 	if p.parseAssign_stmt() || p.parseLabel_stmt() || p.parseReassign_stmt() || p.parseJump_stmt() || p.parseReturn_stmt() {
-		p.cur = root
 		return true
 	}
 	// If the statement was invalid, check if a label was parsed
@@ -266,11 +266,11 @@ func (p *parser) parseAssign_stmt() bool {
 		p.tIndex = tIndex
 		return false
 	}
+	p.tIndex++
 	if !p.parseExpr() {
 		p.tIndex = tIndex
 		return false
 	}
-	p.tIndex++
 	root.addChild(param)
 	root.addChild(p.cur)
 	root.nonterm = nAssign_stmt
@@ -301,11 +301,12 @@ func (p *parser) parseLabel_stmt() bool {
 
 func (p *parser) parseReassign_stmt() bool {
 	root := p.cur
-	defer func() { p.cur = root }()
+	list := make([]*node, 0)
+	tIndex := p.tIndex
 	parseSingle := func() bool {
 		t, ok := p.getToken(0)
 		if !ok || t.terminal != tIdentifier { return false }
-		root.addChild(&node{ token: t })
+		list = append(list, &node{ token: t })
 		p.tIndex++
 		return true
 	}
@@ -314,18 +315,30 @@ func (p *parser) parseReassign_stmt() bool {
 		if t, ok := p.getToken(0); ok && t.lexeme == "," {
 			p.tIndex++
 			if !parseSingle() {
-				log.Fatal("Invalid parameter list")
+				p.tIndex = tIndex
+				return false
 			}
 		} else {
 			break
 		}
 	}
-	if t, ok := p.getToken(0); !ok || t.lexeme != "=" {
-		log.Fatal("Invalid assignment statement")
-	}
+	t, ok := p.getToken(0)
 	p.tIndex++
+	if !ok {
+		if len(list) == 1 {
+			p.tIndex = tIndex
+			return false
+		}
+		log.Fatal("Invalid parameter list")
+	} else if t.lexeme != "=" {
+		p.tIndex = tIndex
+		return false
+	}
 	if !p.parseExpr() {
 		log.Fatal("Invalid assignment statement")
+	}
+	for _, n := range(list) {
+		root.addChild(n)
 	}
 	root.addChild(p.cur)
 	root.nonterm = nReassign_stmt
@@ -360,13 +373,13 @@ func (p *parser) parseExpr() bool {
 	for {
 		t, ok := p.getToken(0)
 		if !ok { break }
-		p.tIndex++
 		if t.lexeme == "(" {
 			p.parseFunc_call()
 			nodes = append(nodes, p.cur)
 			funcCall++
 			continue
 		}
+		p.tIndex++
 		if t.terminal == tIdentifier {
 			nodes = append(nodes, &node{ token: t })
 		} else if t.terminal == tLiteral {
@@ -393,7 +406,7 @@ func (p *parser) parseExpr() bool {
 			break
 		}
 	}
-	if subExpr == -1 && funcCall == -1 {
+	if subExpr == -1 && funcCall <= 0 {
 		if len(nodes) >= 1 {
 			root := &node{ nonterm: nExpr }
 			root.addChild(nodes[0])
@@ -420,7 +433,7 @@ func (p *parser) parseFunc_call() bool {
 	for p.parseExpr() {
 		root.addChild(p.cur)
 	}
-	if len(root.child) == 0 || root.child[len(root.child) - 1].token.lexeme == "" {
+	if len(root.child) == 0 || root.child[len(root.child) - 1].child[0].token.terminal != tIdentifier || len(root.child[len(root.child) - 1].child) != 1 {
 		log.Fatal("Invalid function call: no identifier")
 	}
 	if t, ok := p.getToken(0); !ok || t.lexeme != ")" {

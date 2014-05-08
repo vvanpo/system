@@ -13,24 +13,21 @@ func main() {
 }
 
 func printToken(t token) {
-	var val string
 	if t.lexeme == "" {
-		val = string(t.num)
+		fmt.Printf("lex %d: %d\n", t.terminal, t.num)
 	} else {
-		val = t.lexeme
+		fmt.Printf("lex %d: %s\n", t.terminal, t.lexeme)
 	}
-	fmt.Printf("lex %d: %s\n", t.terminal, val)
 }
 
 func printChild(n *node, indent int) {
-	t := strings.Repeat("  ", indent)
-	var val string
-	if n.token.lexeme == "" {
-		val = string(n.token.num)
+	tab := strings.Repeat("  ", indent)
+	t := n.token
+	if t.lexeme == "" {
+		fmt.Printf("%s%d: %d\n", tab, n.nonterm, t.num)
 	} else {
-		val = n.token.lexeme
+		fmt.Printf("%s%d: %s\n", tab, n.nonterm, t.lexeme)
 	}
-	fmt.Printf("%s%d: %s\n", t, n.nonterm, val)
 	for i := range(n.child) {
 		printChild(n.child[i], indent+1)
 	}

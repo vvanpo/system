@@ -5,5 +5,5 @@ h: func x, y, byte c -> z, r
 
 main:
 	b := 5 254 +
-	b, _ = (b, 10, c, h)
+	b, _ = (b 10 c h)
 
