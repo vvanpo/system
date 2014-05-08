@@ -19,7 +19,7 @@ simple_stmt = [ label ], ( assign_stmt
 	jump_stmt = "jump", expr
 	return_stmt = "return"
 
-expr = expr, { expr }, operator | value			// Ambiguous, need to know operator arity
+expr = expr, [ expr ], operator | value			// Ambiguous, need to know operator arity
 	value = func_call | identifier | literal
 	func_call = "(", { expr }, identifier, ")"
 

@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"io"
-	"strings"
-	"strconv"
 	"log"
+	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -36,15 +36,15 @@ type token struct {
 	terminal
 	lexeme string
 	num    int64
-	line	int
-	col		int
+	line   int
+	col    int
 }
 
 type stateFn func(*lexer) stateFn
 
 type lexer struct {
 	line        string // Current line
-	lineNum		int
+	lineNum     int
 	tokens      chan token
 	indent      []int
 	indent_rune rune
@@ -160,7 +160,7 @@ func lexLine(l *lexer) stateFn {
 // a prefix string in the input list
 func (l *lexer) inList(t terminal, s []string) *token {
 	var tok *token
-	for _, k := range(s) {
+	for _, k := range s {
 		if strings.HasPrefix(l.line[l.pos:], k) {
 			if tok != nil && len(k) < len(tok.lexeme) {
 				continue
@@ -199,10 +199,10 @@ func lexOperator(l *lexer) stateFn {
 func lexIdentifier(l *lexer) stateFn {
 	if !unicode.IsLetter(l.cur) && !unicode.IsDigit(l.cur) && l.cur != '_' {
 		tok := token{
-			terminal:	tIdentifier,
-			lexeme:		l.line[l.start:l.pos],
+			terminal: tIdentifier,
+			lexeme:   l.line[l.start:l.pos],
 		}
-		for _, k := range(reserved) {
+		for _, k := range reserved {
 			if tok.lexeme == k {
 				tok.terminal = tReserved
 			}
@@ -214,7 +214,7 @@ func lexIdentifier(l *lexer) stateFn {
 			log.Fatal("Invalid identifier")
 		}
 	}
-	if l.pos + l.width >= len(l.line) {
+	if l.pos+l.width >= len(l.line) {
 		l.next()
 		l.cur = ' '
 		return lexIdentifier(l)
@@ -225,7 +225,7 @@ func lexIdentifier(l *lexer) stateFn {
 func lexLiteral(l *lexer) stateFn {
 	if !unicode.IsDigit(l.cur) {
 		str := l.line[l.start:l.pos]
-		tok := token{ terminal: tLiteral }
+		tok := token{terminal: tLiteral}
 		var err error
 		if l.cur == 'b' {
 			tok.num, err = strconv.ParseInt(str, 2, 64)
@@ -248,7 +248,7 @@ func lexLiteral(l *lexer) stateFn {
 		}
 		return lexLine
 	}
-	if l.pos + l.width >= len(l.line) {
+	if l.pos+l.width >= len(l.line) {
 		l.next()
 		l.cur = ' '
 		return lexLiteral(l)

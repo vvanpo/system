@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
-	"fmt"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func printChild(n *node, indent int) {
 	} else {
 		fmt.Printf("%s%d: %s\n", tab, n.nonterm, t.lexeme)
 	}
-	for i := range(n.child) {
+	for i := range n.child {
 		printChild(n.child[i], indent+1)
 	}
 }
