@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"strconv"
-	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -13,45 +12,70 @@ import (
 type terminal int
 
 const (
-	tIndent terminal = iota
+	tNewline terminal = iota // Newlines always end statements and are thus necessary for parsing
+	tIndent
 	tDedent
-	tIdentifier
 	tLiteral
-	tReserved
-	tOperator
-	tDelimiter
+	tIdentifier
+	// Fixed lexemes (found in lexer struct)
+	tByte
+	tBlock
+	tFunc
+	tJump
+	tReturn
+	tIf
+	tRef
+	tAdd
+	tSub
+	tMult
+	tDiv
+	tExp
+	tMod
+	tAnd
+	tOr
+	tXor
+	tNot
+	tShiftL
+	tShiftR
+	tAlias
+	tAutoVar
+	tAssign
+	tComma
+	tMap
+	tLeftParen
+	tRightParen
 )
-
-var reserved = [...]string{
-	"byte", "block", "func", "jump", "return", "if", "ref",
-}
-var operators = [...]string{
-	"+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "<<", ">>",
-}
-var delimiters = [...]string{
-	":", ":=", "=", ",", "->", "(", ")",
-}
 
 type token struct {
 	terminal
 	lexeme string
-	num    int64
-	line   int
+	line   int // line & col information passed to parser for anotating errors
 	col    int
 }
-
-type stateFn func(*lexer) stateFn
 
 type lexer struct {
 	line        string // Current line
 	lineNum     int
 	tokens      chan token
 	indent      []int
-	indent_rune rune
-	start       int  // Start of current token
-	pos         int  // Start of current rune
-	cur         rune // Rune pointed to by pos
-	width       int  // Width of cur
+	indent_rune rune                // Tracks the rune used for indentation
+	start       int                 // Start of current token
+	pos         int                 // Start of current rune
+	cur         rune                // Rune pointed to by pos
+	width       int                 // Width of cur
+	reserved    map[string]terminal // Map of reserved words to terminals
+	key         map[string]terminal // Map of all other tokens indexed by fixed lexemes
+}
+
+type lexFn func(*lexer) lexFn
+
+func (l *lexer) lexErr(s string) {
+	log.Printf("Ln %d, col %d: lexing error", l.lineNum, l.pos+1)
+	if s != "" {
+		log.Fatalf(":\n\t%s", s)
+	} else {
+		log.Fatal("\n")
+	}
 }
 
 // lex initializes goroutine to lex input and returns token channel
@@ -60,6 +84,36 @@ func lex(r io.Reader) chan token {
 	l := &lexer{
 		tokens: make(chan token),
 		indent: []int{0},
+		reserved: map[string]terminal{
+			"byte":   tByte,
+			"block":  tBlock,
+			"func":   tFunc,
+			"jump":   tJump,
+			"return": tReturn,
+			"if":     tIf,
+			"ref":    tRef,
+		},
+		key: map[string]terminal{
+			":=": tAutoVar,
+			"=":  tAssign,
+			":":  tAlias,
+			",":  tComma,
+			"->": tMap,
+			"(":  tLeftParen,
+			")":  tRightParen,
+			"+":  tAdd,
+			"-":  tSub,
+			"*":  tMult,
+			"/":  tDiv,
+			"**": tExp,
+			"%":  tMod,
+			"&":  tAnd,
+			"|":  tOr,
+			"^":  tXor,
+			"!":  tNot,
+			"<<": tShiftL,
+			">>": tShiftR,
+		},
 	}
 	go l.run(bufio.NewScanner(r))
 	return l.tokens
@@ -76,42 +130,53 @@ func (l *lexer) run(s *bufio.Scanner) {
 		l.width = 0
 		for state := lexIndent; ; {
 			if !l.next() {
+				l.emit(token{
+					tNewline, "", l.lineNum, len(l.line),
+				})
 				break
 			}
 			state = state(l)
 		}
 	}
 	if s.Err() != nil {
-		log.Fatal("Input error")
+		l.lexErr("Input error")
 	}
 }
 
 func (l *lexer) emit(t token) {
 	t.line = l.lineNum
-	t.col = l.start
+	t.col = l.start + 1
 	l.tokens <- t
+}
+
+// isLast returns true if l.cur is the last rune in the line
+func (l *lexer) isLast() bool {
+	if l.pos+l.width == len(l.line) {
+		return true
+	}
+	return false
 }
 
 // *lexer.next updates *lexer values and returns true if there is a valid rune to lex
 func (l *lexer) next() bool {
-	l.pos += l.width
-	if l.pos >= len(l.line) {
+	if l.isLast() {
 		return false
 	}
+	l.pos += l.width
 	r, s := utf8.DecodeRuneInString(l.line[l.pos:])
 	l.width = s
 	if r == '#' {
 		return false
 	}
 	if r == '\ufffd' && s == 1 {
-		log.Fatal("Invalid input encoding")
+		l.lexErr("Invalid input encoding")
 	}
 	l.cur = r
 	return true
 }
 
 // Call lexIndent at the beginning of a line
-func lexIndent(l *lexer) stateFn {
+func lexIndent(l *lexer) lexFn {
 	if !unicode.IsSpace(l.cur) {
 		for i := range l.indent {
 			if l.indent[i] == l.pos {
@@ -121,137 +186,125 @@ func lexIndent(l *lexer) stateFn {
 						l.emit(token{terminal: tDedent})
 					}
 				}
-				return lexLine(l)
+				return lexNext(l)
 			} else if l.indent[i] > l.pos {
-				log.Fatal("Indentation mismatch")
+				l.lexErr("Indentation mismatch")
 			}
 		}
 		l.indent = append(l.indent, l.pos)
 		l.emit(token{terminal: tIndent})
-		return lexLine(l)
+		return lexNext(l)
 	}
 	if l.cur != '\t' && l.cur != ' ' {
-		log.Fatal("Invalid indentation character")
+		l.lexErr("Invalid indentation character")
 	} else if l.indent_rune == 0 {
 		l.indent_rune = l.cur
 	} else if l.cur != l.indent_rune {
-		log.Fatal("Mixing tabs and spaces for indentation")
+		l.lexErr("Mixing tabs and spaces for indentation")
 	}
 	return lexIndent
 }
 
-// lexLine determines which state function to call for current rune
-// Call lexLine after emitting a token
-func lexLine(l *lexer) stateFn {
+// lexNext determines which state function to call for current rune
+// Call lexNext after emitting a token
+func lexNext(l *lexer) lexFn {
 	l.start = l.pos
 	if unicode.IsSpace(l.cur) {
 		// Ignore whitespace
-		return lexLine
+		return lexNext
 	} else if unicode.IsDigit(l.cur) {
 		return lexLiteral(l)
 	} else if unicode.IsLetter(l.cur) || l.cur == '_' {
 		return lexIdentifier(l)
 	} else {
-		return lexOperator(l)
+		return lexFixed(l)
 	}
 }
 
-// inList returns a token (without updating *lexer indices) when l.start matches
-// a prefix string in the input list
-func (l *lexer) inList(t terminal, s []string) *token {
-	var tok *token
-	for _, k := range s {
-		if strings.HasPrefix(l.line[l.pos:], k) {
-			if tok != nil && len(k) < len(tok.lexeme) {
-				continue
-			}
-			tok = new(token)
-			tok.terminal = t
-			tok.lexeme = l.line[l.pos:(l.pos + len(k))]
+// lexLiteral emits tokens after converting values of the forms:
+//		<binary>b
+//		<octal>o
+//		<hexadecimal>h
+// to decimal form
+func lexLiteral(l *lexer) lexFn {
+	parseInt := func(i, sz int) {
+		var base int
+		switch string(l.line[i]) {
+		case "b":
+			base = 2
+		case "o":
+			base = 8
+		case "h":
+			base = 16
+		default:
+			base = 10
+			i += sz
 		}
-	}
-	return tok
-}
-
-// lexOperator grabs the longest match in the 'operators' and 'delimiters' lists,
-// and emits a token
-func lexOperator(l *lexer) stateFn {
-	var tok token
-	if t := l.inList(tOperator, operators[:]); t != nil {
-		tok = *t
-	}
-	if t := l.inList(tDelimiter, delimiters[:]); t != nil {
-		if len(t.lexeme) > len(tok.lexeme) {
-			tok = *t
+		n, err := strconv.ParseInt(l.line[l.start:i], base, 64)
+		if err != nil {
+			l.lexErr(err.Error())
 		}
+		t := token{terminal: tLiteral}
+		t.lexeme = strconv.Itoa(int(n))
+		l.emit(t)
 	}
-	if tok.lexeme == "" {
-		log.Fatal("Invalid operator or delimiter")
+	if l.cur == ':' || l.cur == '=' || unicode.IsSpace(l.cur) {
+		_, sz := utf8.DecodeLastRuneInString(l.line[:l.pos])
+		parseInt(l.pos-sz, sz)
+		return lexNext(l)
+	} else if l.isLast() {
+		parseInt(l.pos, l.width)
+		return lexNext
 	}
-	l.pos += len(tok.lexeme)
-	l.width = 0
-	l.emit(tok)
-	return lexLine
+	return lexLiteral
 }
 
 // lexIdentifier emits an identifier token or a reserved token, if the
 // identifier is a reserved keyword
-func lexIdentifier(l *lexer) stateFn {
-	if !unicode.IsLetter(l.cur) && !unicode.IsDigit(l.cur) && l.cur != '_' {
-		tok := token{
-			terminal: tIdentifier,
-			lexeme:   l.line[l.start:l.pos],
-		}
-		for _, k := range reserved {
-			if tok.lexeme == k {
-				tok.terminal = tReserved
+func lexIdentifier(l *lexer) lexFn {
+	parseIdentifier := func(i int) {
+		t := token{terminal: tIdentifier, lexeme: l.line[l.start:i]}
+		s := l.line[l.start:i]
+		for k := range l.reserved {
+			if s == k {
+				t.terminal = l.reserved[k]
 			}
 		}
-		if unicode.IsSpace(l.cur) || l.inList(tDelimiter, delimiters[:]) != nil || l.cur == ':' || l.cur == '=' {
-			l.emit(tok)
-			return lexLine(l)
-		} else {
-			log.Fatal("Invalid identifier")
+		l.emit(t)
+	}
+	if unicode.In(l.cur, unicode.Nd, unicode.L) || l.cur == '_' {
+		if l.isLast() {
+			parseIdentifier(l.pos + l.width)
 		}
+		return lexIdentifier
+	} else if l.cur == ',' || l.cur == ')' || l.cur == ':' || l.cur == '=' || unicode.IsSpace(l.cur) {
+		parseIdentifier(l.pos)
+		return lexNext(l)
 	}
-	if l.pos+l.width >= len(l.line) {
-		l.next()
-		l.cur = ' '
-		return lexIdentifier(l)
-	}
-	return lexIdentifier
+	l.lexErr("Invalid identifier")
+	return nil
 }
 
-func lexLiteral(l *lexer) stateFn {
-	if !unicode.IsDigit(l.cur) {
-		str := l.line[l.start:l.pos]
-		tok := token{terminal: tLiteral}
-		var err error
-		if l.cur == 'b' {
-			tok.num, err = strconv.ParseInt(str, 2, 64)
-		} else if l.cur == 'o' {
-			tok.num, err = strconv.ParseInt(str, 8, 64)
-		} else if l.cur == 'h' {
-			tok.num, err = strconv.ParseInt(str, 16, 64)
-		} else {
-			tok.num, err = strconv.ParseInt(str, 10, 64)
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		l.emit(tok)
-		if (l.cur == 'b' || l.cur == 'o' || l.cur == 'h') && l.next() {
-			if !unicode.IsSpace(l.cur) && l.inList(tDelimiter, delimiters[:]) == nil {
-				log.Fatal("Invalid literal")
+func lexFixed(l *lexer) lexFn {
+	parseFixed := func(i int) {
+		s := l.line[l.start:i]
+		var t token
+		for k := range l.key {
+			if s == k {
+				t = token{terminal: l.key[k]}
 			}
-			return lexLine(l)
 		}
-		return lexLine
+		if t.terminal == 0 {
+			l.lexErr("Invalid symbol")
+		}
+		l.emit(t)
 	}
-	if l.pos+l.width >= len(l.line) {
-		l.next()
-		l.cur = ' '
-		return lexLiteral(l)
+	if unicode.In(l.cur, unicode.Nd, unicode.L, unicode.Z) || l.cur == '_' {
+		parseFixed(l.pos)
+		return lexNext(l)
+	} else if l.isLast() {
+		parseFixed(l.pos + l.width)
+		return nil
 	}
-	return lexLiteral
+	return lexFixed
 }

@@ -1,16 +1,9 @@
 
-indent, dedent
+newline, indent, dedent
 
-keyword =
 	"byte", "block", "func", "jump", "return", "if", "ref"
-	
-operator =
 	"+", "-", "*", "/", "**", "%", "&", "|", "^", "!", "<<", ">>"
-
-delimiter =
 	",", "->", ")"
-
-other =
 	":", ":=", "=", "("
 
 identifier = ( "_" | letter ), { "_" | letter | digit }

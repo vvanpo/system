@@ -5,6 +5,9 @@ import (
 	"log"
 )
 
+// DEBUG
+var tOperator, tReserved terminal
+
 type nonterm int
 
 const (
@@ -31,11 +34,11 @@ type parser struct {
 	tIndex int
 	tree   *node
 	cur    *node
-	sym		map[string]struct{
-		size	int
+	sym    map[string]struct {
+		size int
 		*node
 	}
-	curNameSpace	[]string
+	curNameSpace []string
 }
 
 type node struct {
@@ -80,7 +83,6 @@ func (p *parser) nextToken() bool {
 	if !ok {
 		return false
 	}
-	printToken(t)
 	p.list = append(p.list, t)
 	return true
 }
