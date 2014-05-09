@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -34,6 +35,7 @@ type parser struct {
 		size	int
 		*node
 	}
+	curNameSpace	[]string
 }
 
 type node struct {
@@ -49,13 +51,17 @@ func (p *parser) parseErr(t token, err string) {
 }
 
 func (p *parser) addSymbol(n *node) {
-	sym := n.token.lexeme
-	//sym = fmt.Sprintf("%s.%s", , sym)
-	if _, ok := p.sym[sym] {
+	var sym string
+	for _, s := range p.curNameSpace {
+		sym = fmt.Sprintf("%s%s.", sym, s)
+	}
+	sym += n.token.lexeme
+	if _, ok := p.sym[sym]; ok {
 		p.parseErr(n.token, fmt.Sprintf("Redeclared symbol '%s'", sym))
 	}
-	size := 8
-	p.sym[sym] = struct{ size, n }
+	s := p.sym[sym]
+	s.size = 8
+	s.node = n
 }
 
 func parse(tokens chan token) *node {
@@ -156,7 +162,7 @@ func (p *parser) parseLabel() bool {
 				token:   t,
 			}
 			p.tIndex += 2
-			p.addSymbol(t.lexeme, p.cur)
+			p.addSymbol(p.cur)
 			return true
 		}
 	}
@@ -178,8 +184,18 @@ func (p *parser) parseFunc_def() bool {
 			log.Fatal("Invalid function definition")
 		}
 		root.addChild(p.cur)
+		c := p.cur
+		for len(c.child) == 1 {
+			c = c.child[0]
+		}
+		p.curNameSpace = append(p.curNameSpace, c.token.lexeme)
 		for p.parseParam() {
 			root.addChild(p.cur)
+			c := p.cur
+			for len(c.child) == 1 {
+				c = c.child[0]
+			}
+			p.curNameSpace = append(p.curNameSpace, c.token.lexeme)
 		}
 	}
 	// Block node
@@ -239,25 +255,32 @@ func (p *parser) parseParam() bool {
 		if !ok || (t.terminal != tReserved && t.terminal != tIdentifier) {
 			return false
 		}
+		child := root
 		if t.terminal == tReserved {
 			if t.lexeme == "byte" {
-				root.addChild(&node{nonterm: nType, token: t})
+				child.addChild(&node{nonterm: nType, token: t})
+				child = child.child[0]
 				p.tIndex++
 			} else if t.lexeme == "block" {
 				if u, ok := p.getToken(1); ok && u.terminal == tLiteral {
-					root.addChild(&node{nonterm: nType, token: t})
-					root.addChild(&node{nonterm: nType, token: u})
+					child = &node{nonterm: nType, token: t}
+					child = child.child[0]
+					child.addChild(&node{nonterm: nType, token: u})
+					child = child.child[0]
 					p.tIndex += 2
 				} else {
 					log.Fatal("Invalid block-typed parameter")
 				}
+			} else {
+				return false
 			}
 			t, ok = p.getToken(0)
 			if !ok || t.terminal != tIdentifier {
 				log.Fatal("Invalid parameter")
 			}
 		}
-		root.addChild(&node{token: t})
+		child.addChild(&node{token: t})
+		p.addSymbol(child.child[0])
 		p.tIndex++
 		return true
 	}
