@@ -151,7 +151,7 @@ func (l *lexer) emit(t token) {
 
 // isLast returns true if l.cur is the last rune in the line
 func (l *lexer) isLast() bool {
-	if l.pos+l.width == len(l.line) {
+	if l.pos+l.width == len(l.line) || l.line[l.pos+l.width] == uint8('#') {
 		return true
 	}
 	return false
@@ -165,9 +165,6 @@ func (l *lexer) next() bool {
 	l.pos += l.width
 	r, s := utf8.DecodeRuneInString(l.line[l.pos:])
 	l.width = s
-	if r == '#' {
-		return false
-	}
 	if r == '\ufffd' && s == 1 {
 		l.lexErr("Invalid input encoding")
 	}
