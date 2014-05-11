@@ -3,43 +3,28 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 )
-
-// DEBUG
-var tOperator, tReserved terminal
 
 type nonterm int
 
 const (
 	nLabel nonterm = iota
 
-	nFunc_def
+	nFuncDef
 	nBlock
-	nIf_stmt
-	nAssign_stmt
-	nLabel_stmt
-	nReassign_stmt
-	nJump_stmt
-	nReturn_stmt
+	nIfStmt
+	nAutoVarStmt
+	nAliasStmt
+	nAssignStmt
+	nJumpStmt
+	nReturnStmt
 
 	nParam
 	nType
 	nExpr
-	nFunc_call
+	nFuncCall
 )
-
-type parser struct {
-	tokens chan token
-	list   []token
-	tIndex int
-	tree   *node
-	cur    *node
-	sym    map[string]struct {
-		size int
-		*node
-	}
-	curNameSpace []string
-}
 
 type node struct {
 	parent *node
@@ -48,9 +33,26 @@ type node struct {
 	token
 }
 
-func (p *parser) parseErr(t token, err string) {
-	log.Fatalf("Parsing error at Line %d, Col %d:\n\t%s", t.line, t.col, err)
+func (n *node) addChild(c *node) {
+	c.parent = n
+	n.child = append(n.child, c)
 	return
+}
+
+type parser struct {
+	t      chan token
+	tokens []token
+	tCur   int
+	tree   *node
+	sym    map[string]struct {
+		size int
+		*node
+	}
+	curNameSpace []string
+}
+
+func (p *parser) parseErr(t token, err string) {
+	log.Fatalf("Line %d, col %d: parsing error:\n\t%s", t.line, t.col, err)
 }
 
 func (p *parser) addSymbol(n *node) {
@@ -58,64 +60,85 @@ func (p *parser) addSymbol(n *node) {
 	for _, s := range p.curNameSpace {
 		sym = fmt.Sprintf("%s%s.", sym, s)
 	}
-	sym += n.token.lexeme
+	sym += n.lexeme
 	if _, ok := p.sym[sym]; ok {
 		p.parseErr(n.token, fmt.Sprintf("Redeclared symbol '%s'", sym))
 	}
 	s := p.sym[sym]
-	s.size = 8
 	s.node = n
+	s.size = 8
+	if n.parent.terminal == tLiteral {
+		s.size, _ = strconv.Atoi(n.parent.lexeme)
+	}
 }
 
-func parse(tokens chan token) *node {
-	p := parser{
-		tokens: tokens,
-		tree:   new(node),
-	}
-	p.tree.parent = p.tree
-	p.cur = p.tree
-	p.parseFile()
+func parse(t chan token) *node {
+	p := parser{t: t}
+	p.tree = p.parseFile()
 	return p.tree
 }
 
 func (p *parser) nextToken() bool {
-	t, ok := <-p.tokens
+	t, ok := <-p.t
 	if !ok {
 		return false
 	}
-	p.list = append(p.list, t)
+	p.tokens = append(p.tokens, t)
 	return true
 }
 
-func (p *parser) getToken(i int) (token, bool) {
-	if d := p.tIndex + i - len(p.list); d >= 0 {
+func (p *parser) getToken(i int) (*token, bool) {
+	if d := p.tCur + i - len(p.tokens); d >= 0 {
 		for j := 0; j <= d; j++ {
 			if !p.nextToken() {
-				return token{}, false
+				return nil, false
 			}
 		}
 	}
-	return p.list[p.tIndex+i], true
+	return &p.tokens[p.tCur+i], true
 }
 
-func (n *node) addChild(c *node) {
-	c.parent = n
-	n.child = append(n.child, c)
+func (p *parser) parseFile() (n *node) {
+	c := p.parseStmt()
+	if c == nil { return }
+	n = new(node)
+	n.addChild(c)
+	for {
+		c = p.parseStmt()
+		if c == nil { break }
+		n.addChild(c)
+	}
 	return
 }
 
-func (p *parser) parseFile() bool {
-	root := p.cur
-	if !p.parseStmt() {
-		return false
+func (p *parser) parseStmt() (n *node) {
+	stmt := func(f func() *node) {
+		if s := f(); s != nil {
+			if n != nil {
+				n.addChild(s)
+			} else {
+				n = s
+			}
+		}
 	}
-	root.addChild(p.cur)
-	for p.parseStmt() {
-		root.addChild(p.cur)
+	if n = p.parseAliasStmt(); n != nil { return }
+	n = p.parseLabel()
+	if n != nil {
+		stmt(p.parseFuncDef)
+		stmt(p.parseBlock)
+		stmt(p.parseIfStmt)
 	}
-	p.cur = root
-	return true
+	stmt(p.parseAutoVarStmt)
+	stmt(p.parseAliasStmt)
+	stmt(p.parseAssignStmt)
+	stmt(p.parseJumpStmt)
+	stmt(p.parseReturnStmt)
+	stmt(p.parseParam)
+	stmt(p.parseExpr)
+	return
 }
+
+/*
 
 func (p *parser) parseStmt() bool {
 	saved := p.cur
@@ -507,3 +530,7 @@ func (p *parser) parseFunc_call() bool {
 	p.cur = root
 	return true
 }
+
+
+
+*/

@@ -70,7 +70,7 @@ type lexer struct {
 type lexFn func(*lexer) lexFn
 
 func (l *lexer) lexErr(s string) {
-	log.Printf("Ln %d, col %d: lexing error", l.lineNum, l.pos+1)
+	log.Printf("Line %d, col %d: lexing error", l.lineNum, l.pos+1)
 	if s != "" {
 		log.Fatalf(":\n\t%s", s)
 	} else {
@@ -301,7 +301,8 @@ func lexFixed(l *lexer) lexFn {
 		t := parseFixed(l.pos)
 		if !unicode.IsSpace(l.cur) {
 			switch t {
-			default: l.lexErr("No whitespace after symbol '" + l.line[l.start:l.pos] + "'")
+			default:
+				l.lexErr("No whitespace after symbol '" + l.line[l.start:l.pos] + "'")
 			case tAlias:
 			case tAutoVar:
 			case tAssign:
