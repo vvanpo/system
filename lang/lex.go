@@ -283,7 +283,7 @@ func lexIdentifier(l *lexer) lexFn {
 }
 
 func lexFixed(l *lexer) lexFn {
-	parseFixed := func(i int) {
+	parseFixed := func(i int) terminal {
 		s := l.line[l.start:i]
 		var t token
 		for k := range l.key {
@@ -295,9 +295,20 @@ func lexFixed(l *lexer) lexFn {
 			l.lexErr("Invalid symbol")
 		}
 		l.emit(t)
+		return t.terminal
 	}
 	if unicode.In(l.cur, unicode.Nd, unicode.L, unicode.Z) || l.cur == '_' {
-		parseFixed(l.pos)
+		t := parseFixed(l.pos)
+		if !unicode.IsSpace(l.cur) {
+			switch t {
+			default: l.lexErr("No whitespace after symbol '" + l.line[l.start:l.pos] + "'")
+			case tAlias:
+			case tAutoVar:
+			case tAssign:
+			case tComma:
+			case tLeftParen:
+			}
+		}
 		return lexNext(l)
 	} else if l.isLast() {
 		parseFixed(l.pos + l.width)
