@@ -9,7 +9,7 @@ import (
 type nonterm int
 
 const (
-	nLabel nonterm = iota
+	nError nonterm = iota
 
 	nFuncDef
 	nBlock
@@ -20,6 +20,7 @@ const (
 	nJumpStmt
 	nReturnStmt
 
+	nLabel
 	nParam
 	nType
 	nExpr
@@ -30,7 +31,7 @@ type node struct {
 	parent *node
 	child  []*node
 	nonterm
-	token
+	*token
 }
 
 func (n *node) addChild(c *node) {
@@ -51,10 +52,15 @@ type parser struct {
 	curNameSpace []string
 }
 
-func (p *parser) parseErr(t token, err string) {
-	log.Fatalf("Line %d, col %d: parsing error:\n\t%s", t.line, t.col, err)
+func (p *parser) parseErr(t *token, err string) {
+	if t != nil {
+		log.Fatalf("Line %d, col %d: parsing error:\n\t%s", t.line, t.col, err)
+	} else {
+		log.Fatalf("Parsing error:\n\t%s", err)
+	}
 }
 
+// Adds symbol to p.sym table
 func (p *parser) addSymbol(n *node) {
 	var sym string
 	for _, s := range p.curNameSpace {
@@ -67,7 +73,7 @@ func (p *parser) addSymbol(n *node) {
 	s := p.sym[sym]
 	s.node = n
 	s.size = 8
-	if n.parent.terminal == tLiteral {
+	if n.parent != nil && n.parent.token != nil && n.parent.terminal == tLiteral {
 		s.size, _ = strconv.Atoi(n.parent.lexeme)
 	}
 }
@@ -75,6 +81,9 @@ func (p *parser) addSymbol(n *node) {
 func parse(t chan token) *node {
 	p := parser{t: t}
 	p.tree = p.parseFile()
+	if p.tree == nil {
+		p.parseErr(nil, "Empty file")
+	}
 	return p.tree
 }
 
@@ -99,438 +108,382 @@ func (p *parser) getToken(i int) (*token, bool) {
 }
 
 func (p *parser) parseFile() (n *node) {
-	c := p.parseStmt()
-	if c == nil { return }
 	n = new(node)
-	n.addChild(c)
 	for {
-		c = p.parseStmt()
-		if c == nil { break }
+		if t, ok := p.getToken(0); ok && t.terminal == tNewline {
+			p.tCur++
+			continue
+		}
+		c := p.parseStmt()
+		if c == nil {
+			break
+		}
 		n.addChild(c)
+	}
+	if len(n.child) == 0 {
+		return nil
 	}
 	return
 }
 
 func (p *parser) parseStmt() (n *node) {
-	stmt := func(f func() *node) {
+	stmt := func(f func() *node) bool {
 		if s := f(); s != nil {
 			if n != nil {
 				n.addChild(s)
 			} else {
 				n = s
 			}
+			if t, ok := p.getToken(0); ok && t.terminal != tNewline {
+				p.parseErr(t, "Invalid statement")
+			}
+			p.tCur++
+			return true
 		}
+		return false
 	}
-	if n = p.parseAliasStmt(); n != nil { return }
+	if stmt(p.parseAliasStmt) {
+		return
+	}
+	tSaved := p.tCur
 	n = p.parseLabel()
 	if n != nil {
-		stmt(p.parseFuncDef)
-		stmt(p.parseBlock)
-		stmt(p.parseIfStmt)
+		p.curNameSpace = append(p.curNameSpace, n.lexeme)
+		if stmt(p.parseFuncDef) {
+			return
+		}
+		p.curNameSpace = p.curNameSpace[:len(p.curNameSpace)-1]
+		if stmt(p.parseBlock) || stmt(p.parseIfStmt) {
+			return
+		}
 	}
-	stmt(p.parseAutoVarStmt)
-	stmt(p.parseAliasStmt)
-	stmt(p.parseAssignStmt)
-	stmt(p.parseJumpStmt)
-	stmt(p.parseReturnStmt)
-	stmt(p.parseParam)
-	stmt(p.parseExpr)
+	if stmt(p.parseAutoVarStmt) || stmt(p.parseAliasStmt) || stmt(p.parseAssignStmt) || stmt(p.parseJumpStmt) || stmt(p.parseReturnStmt) || stmt(p.parseParam) || stmt(p.parseExpr) {
+		return
+	}
+	p.tCur = tSaved
+	return nil
+}
+
+func (p *parser) parseFuncDef() (n *node) {
+	t, ok := p.getToken(0)
+	if !ok || t.terminal != tFunc {
+		return
+	}
+	p.tCur++
+	n = &node{nonterm: nFuncDef}
+	if c := p.parseParam(); c != nil {
+		n.addChild(c)
+	}
+	if t, ok := p.getToken(0); ok && t.terminal == tMap {
+		p.tCur++
+		if c := p.parseParam(); c != nil {
+			n.addChild(c)
+		} else {
+			p.parseErr(t, "Invalid function definition")
+		}
+	}
+	// Block node
+	if c := p.parseBlock(); c != nil {
+		n.addChild(c)
+	} else {
+		p.parseErr(t, "Invalid function definition")
+	}
 	return
 }
 
-/*
-
-func (p *parser) parseStmt() bool {
-	saved := p.cur
-	root := new(node)
-	p.cur = root
-	if p.parseLabel() {
-		root.addChild(p.cur)
-		// The parse<stmt> methods assume p.cur is the stmt root
-		p.cur = root
-		if p.parseFunc_def() || p.parseIf_stmt() || p.parseBlock() {
-			p.cur = root
-			return true
-		}
-		// In the case of label_stmt, the owning non-terminal is ambiguous
-		if p.parseExpr() {
-			label := root.child[0]
-			root.child = root.child[0:0]
-			root.nonterm = nLabel_stmt
-			// Turn label identifier into param
-			param := &node{nonterm: nParam}
-			param.addChild(label)
-			root.addChild(param)
-			// Add expression to label_stmt
-			root.addChild(p.cur)
-			p.cur = root
-			return true
-		}
-	}
-	if p.parseAssign_stmt() || p.parseLabel_stmt() || p.parseReassign_stmt() || p.parseJump_stmt() || p.parseReturn_stmt() {
-		return true
-	}
-	// If the statement was invalid, check if a label was parsed
-	if len(root.child) > 0 {
-		p.parseErr(root.child[0].token, "Invalid statement")
-	}
-	p.cur = saved
-	return false
-}
-
-func (p *parser) parseLabel() bool {
-	if t, ok := p.getToken(0); ok && t.terminal == tIdentifier {
-		if u, ok := p.getToken(1); ok && u.lexeme == ":" {
-			p.cur = &node{
-				parent:  p.cur,
-				nonterm: nLabel,
-				token:   t,
-			}
-			p.tIndex += 2
-			p.addSymbol(p.cur)
-			return true
-		}
-	}
-	return false
-}
-
-func (p *parser) parseFunc_def() bool {
-	root := p.cur
-	if t, ok := p.getToken(0); !ok || t.lexeme != "func" {
-		return false
-	}
-	p.tIndex++
-	for p.parseParam() {
-		root.addChild(p.cur)
-	}
-	if t, ok := p.getToken(0); ok && t.lexeme == "->" {
-		p.tIndex++
-		if !p.parseParam() {
-			log.Fatal("Invalid function definition")
-		}
-		root.addChild(p.cur)
-		c := p.cur
-		for len(c.child) == 1 {
-			c = c.child[0]
-		}
-		p.curNameSpace = append(p.curNameSpace, c.token.lexeme)
-		for p.parseParam() {
-			root.addChild(p.cur)
-			c := p.cur
-			for len(c.child) == 1 {
-				c = c.child[0]
-			}
-			p.curNameSpace = append(p.curNameSpace, c.token.lexeme)
-		}
-	}
-	// Block node
-	p.cur = new(node)
-	root.addChild(p.cur)
-	if !p.parseBlock() {
-		log.Fatal("Invalid function definition")
-	}
-	root.nonterm = nFunc_def
-	p.cur = root
-	return true
-}
-
-func (p *parser) parseBlock() bool {
+func (p *parser) parseBlock() (n *node) {
 	t, ok := p.getToken(0)
 	if !ok || t.terminal != tIndent {
-		return false
+		return
 	}
-	p.tIndex++
-	p.cur.nonterm = nBlock
-	if !p.parseFile() {
+	p.tCur++
+	if n = p.parseFile(); n == nil {
 		p.parseErr(t, "Invalid block statement")
 	}
+	n.nonterm = nBlock
 	if t, ok := p.getToken(0); ok && t.terminal != tDedent {
 		p.parseErr(t, "Invalid block statement")
 	}
-	p.tIndex++
-	return true
+	p.tCur++
+	return
 }
 
-func (p *parser) parseIf_stmt() bool {
-	if t, ok := p.getToken(0); !ok || t.lexeme != "if" {
-		return false
+func (p *parser) parseIfStmt() (n *node) {
+	t, ok := p.getToken(0)
+	if !ok || t.terminal != tIf {
+		return
 	}
-	p.tIndex++
-	root := p.cur
-	root.nonterm = nIf_stmt
-	if !p.parseExpr() {
-		log.Fatal("Invalid if-statement")
+	p.tCur++
+	n = &node{nonterm: nIfStmt}
+	if c := p.parseExpr(); c != nil {
+		n.addChild(c)
+	} else {
+		p.parseErr(t, "Invalid if-statement")
 	}
-	root.addChild(p.cur)
 	// Block node
-	p.cur = new(node)
-	root.addChild(p.cur)
-	if !p.parseBlock() {
-		log.Fatal("Invalid function definition")
+	if c := p.parseBlock(); c != nil {
+		n.addChild(c)
+	} else {
+		p.parseErr(t, "Invalid if-statement")
 	}
-	p.cur = root
-	return true
+	return
 }
 
-func (p *parser) parseParam() bool {
-	root := new(node)
-	root.nonterm = nParam
-	parseSingle := func() bool {
-		t, ok := p.getToken(0)
-		if !ok || (t.terminal != tReserved && t.terminal != tIdentifier) {
-			return false
-		}
-		child := root
-		if t.terminal == tReserved {
-			if t.lexeme == "byte" {
-				child.addChild(&node{nonterm: nType, token: t})
-				child = child.child[0]
-				p.tIndex++
-			} else if t.lexeme == "block" {
-				if u, ok := p.getToken(1); ok && u.terminal == tLiteral {
-					child = &node{nonterm: nType, token: t}
-					child = child.child[0]
-					child.addChild(&node{nonterm: nType, token: u})
-					child = child.child[0]
-					p.tIndex += 2
-				} else {
-					log.Fatal("Invalid block-typed parameter")
-				}
-			} else {
-				return false
-			}
-			t, ok = p.getToken(0)
-			if !ok || t.terminal != tIdentifier {
-				log.Fatal("Invalid parameter")
-			}
-		}
-		child.addChild(&node{token: t})
-		p.addSymbol(child.child[0])
-		p.tIndex++
-		return true
+func (p *parser) parseAutoVarStmt() (n *node) {
+	tSaved := p.tCur
+	n = &node{nonterm: nAutoVarStmt}
+	if c := p.parseParam(); c != nil {
+		n.addChild(c)
+	} else {
+		return nil
 	}
-	if !parseSingle() {
-		return false
+	if t, ok := p.getToken(0); !ok || t.terminal != tAutoVar {
+		p.tCur = tSaved
+		return nil
 	}
-	for {
-		if t, ok := p.getToken(0); ok && t.lexeme == "," {
-			p.tIndex++
-			if !parseSingle() {
-				log.Fatal("Invalid parameter list")
-			}
-		} else {
-			break
-		}
+	p.tCur++
+	if c := p.parseExpr(); c != nil {
+		n.addChild(c)
+	} else {
+		p.parseErr(&p.tokens[p.tCur], "Invalid automatic variable definition")
 	}
-	p.cur = root
-	return true
+	return
 }
 
-func (p *parser) parseAssign_stmt() bool {
-	root := p.cur
-	tIndex := p.tIndex
-	defer func() { p.cur = root }()
-	if !p.parseParam() {
-		return false
+func (p *parser) parseAliasStmt() (n *node) {
+	n = &node{nonterm: nAliasStmt}
+	if c := p.parseParam(); c != nil {
+		n.addChild(c)
+	} else {
+		return nil
 	}
-	param := p.cur
-	if t, ok := p.getToken(0); !ok || t.lexeme != ":=" {
-		p.tIndex = tIndex
-		return false
+	if t, ok := p.getToken(0); !ok || t.terminal != tAlias {
+		return nil
 	}
-	p.tIndex++
-	if !p.parseExpr() {
-		p.tIndex = tIndex
-		return false
+	if c := p.parseExpr(); c != nil {
+		n.addChild(c)
+	} else {
+		return nil
 	}
-	root.addChild(param)
-	root.addChild(p.cur)
-	root.nonterm = nAssign_stmt
-	return true
+	p.tCur++
+	return
 }
 
-func (p *parser) parseLabel_stmt() bool {
-	root := p.cur
-	tIndex := p.tIndex
-	defer func() { p.cur = root }()
-	if !p.parseParam() {
-		return false
-	}
-	param := p.cur
-	if t, ok := p.getToken(0); !ok || t.lexeme != ":" {
-		p.tIndex = tIndex
-		return false
-	}
-	if !p.parseExpr() {
-		p.tIndex = tIndex
-		return false
-	}
-	p.tIndex++
-	root.addChild(param)
-	root.addChild(p.cur)
-	root.nonterm = nLabel_stmt
-	return true
-}
-
-func (p *parser) parseReassign_stmt() bool {
-	root := p.cur
-	list := make([]*node, 0)
-	tIndex := p.tIndex
-	parseSingle := func() bool {
+func (p *parser) parseAssignStmt() (n *node) {
+	numArgs := 0
+	parseSingle := func(c *node) bool {
 		t, ok := p.getToken(0)
 		if !ok || t.terminal != tIdentifier {
 			return false
 		}
-		list = append(list, &node{token: t})
-		p.tIndex++
+		c.addChild(&node{token: t})
+		p.tCur++
+		numArgs++
 		return true
 	}
-	if !parseSingle() {
-		return false
+	tSaved := p.tCur
+	c := new(node)
+	n = &node{nonterm: nAssignStmt}
+	n.addChild(c)
+	if !parseSingle(c) {
+		return nil
 	}
 	for {
-		if t, ok := p.getToken(0); ok && t.lexeme == "," {
-			p.tIndex++
-			if !parseSingle() {
-				p.tIndex = tIndex
-				return false
+		if t, ok := p.getToken(0); ok && t.terminal == tComma {
+			p.tCur++
+			if !parseSingle(c) {
+				p.parseErr(t, "Invalid assignment statement")
 			}
 		} else {
 			break
 		}
 	}
 	t, ok := p.getToken(0)
-	p.tIndex++
 	if !ok {
-		if len(list) == 1 {
-			p.tIndex = tIndex
+		if numArgs == 1 {
+			p.tCur = tSaved
+			return nil
+		}
+		p.parseErr(&p.tokens[p.tCur], "Invalid parameter list")
+	} else if t.terminal != tAssign {
+		p.tCur = tSaved
+		return nil
+	}
+	p.tCur++
+	if c := p.parseExpr(); c != nil {
+		n.addChild(c)
+	} else {
+		p.parseErr(t, "Invalid assignment statement")
+	}
+	return
+}
+
+func (p *parser) parseJumpStmt() (n *node) {
+	if t, ok := p.getToken(0); !ok || t.terminal != tJump {
+		return
+	}
+	p.tCur++
+	n = &node{nonterm: nJumpStmt}
+	if c := p.parseExpr(); c != nil {
+		n.addChild(c)
+	} else {
+		p.parseErr(&p.tokens[p.tCur], "Invalid jump statement")
+	}
+	return
+}
+
+func (p *parser) parseReturnStmt() (n *node) {
+	if t, ok := p.getToken(0); !ok || t.terminal != tReturn {
+		return
+	}
+	p.tCur++
+	return &node{nonterm: nReturnStmt}
+}
+
+func (p *parser) parseLabel() (n *node) {
+	if t, ok := p.getToken(0); ok && t.terminal == tIdentifier {
+		if u, ok := p.getToken(1); ok && u.terminal == tAlias {
+			n = &node{
+				nonterm: nLabel,
+				token:   t,
+			}
+			p.tCur += 2
+			p.addSymbol(n)
+		}
+	}
+	return
+}
+
+func (p *parser) parseParam() (n *node) {
+	n = &node{nonterm: nParam}
+	parseSingle := func() bool {
+		t, ok := p.getToken(0)
+		if !ok || (t.terminal != tByte && t.terminal != tBlock && t.terminal != tIdentifier) {
 			return false
 		}
-		log.Fatal("Invalid parameter list")
-	} else if t.lexeme != "=" {
-		p.tIndex = tIndex
-		return false
+		child := n
+		if t.terminal == tByte {
+			child.addChild(&node{nonterm: nType, token: t})
+			child = child.child[0]
+			p.tCur++
+		} else if t.terminal == tBlock {
+			if u, ok := p.getToken(1); ok && u.terminal == tLiteral {
+				child = &node{nonterm: nType, token: t}
+				child = child.child[0]
+				child.addChild(&node{nonterm: nType, token: u})
+				child = child.child[0]
+				p.tCur += 2
+			} else {
+				p.parseErr(t, "Invalid block-typed parameter")
+			}
+		}
+		t, ok = p.getToken(0)
+		if !ok || t.terminal != tIdentifier {
+			p.parseErr(t, "Invalid parameter")
+		}
+		child.addChild(&node{token: t})
+		p.addSymbol(child.child[0])
+		p.tCur++
+		return true
 	}
-	if !p.parseExpr() {
-		log.Fatal("Invalid assignment statement")
+	if !parseSingle() {
+		return nil
 	}
-	for _, n := range list {
-		root.addChild(n)
+	for {
+		if t, ok := p.getToken(0); ok && t.terminal == tComma {
+			p.tCur++
+			if !parseSingle() {
+				p.parseErr(t, "Invalid parameter list")
+			}
+		} else {
+			break
+		}
 	}
-	root.addChild(p.cur)
-	root.nonterm = nReassign_stmt
-	return true
+	return
 }
 
-func (p *parser) parseJump_stmt() bool {
-	if t, ok := p.getToken(0); !ok || t.lexeme != "jump" {
-		return false
-	}
-	p.tIndex++
-	root := p.cur
-	if !p.parseExpr() {
-		log.Fatal("Invalid jump statement")
-	}
-	root.addChild(p.cur)
-	root.nonterm = nJump_stmt
-	p.cur = root
-	return true
-}
-
-func (p *parser) parseReturn_stmt() bool {
-	if t, ok := p.getToken(0); !ok || t.lexeme != "return" {
-		return false
-	}
-	p.tIndex++
-	p.cur.nonterm = nReturn_stmt
-	return true
-}
-
-func (p *parser) parseExpr() bool {
+func (p *parser) parseExpr() (n *node) {
+	tSaved := p.tCur
 	nodes := make([]*node, 0)
-	tIndex := p.tIndex
-	subExpr := -1
-	funcCall := -1
+loop:
 	for {
 		t, ok := p.getToken(0)
 		if !ok {
 			break
 		}
-		if t.lexeme == "(" {
-			p.parseFunc_call()
-			nodes = append(nodes, p.cur)
-			funcCall++
+		if t.terminal == tLeftParen {
+			nodes = append(nodes, p.parseFuncCall())
+			p.tCur++
 			continue
 		}
-		p.tIndex++
-		if t.terminal == tIdentifier {
+		p.tCur++
+		switch arity := 2; t.terminal {
+		case tIdentifier:
+			fallthrough
+		case tLiteral:
 			nodes = append(nodes, &node{token: t})
-		} else if t.terminal == tLiteral {
-			nodes = append(nodes, &node{token: t})
-		} else if t.terminal == tOperator {
-			n := 2
-			if t.lexeme == "!" {
-				n = 1
+		case tNot:
+			arity = 1
+			fallthrough
+		case tAdd:
+			fallthrough
+		case tSub:
+			fallthrough
+		case tMult:
+			fallthrough
+		case tDiv:
+			fallthrough
+		case tExp:
+			fallthrough
+		case tMod:
+			fallthrough
+		case tAnd:
+			fallthrough
+		case tOr:
+			fallthrough
+		case tXor:
+			fallthrough
+		case tShiftL:
+			fallthrough
+		case tShiftR:
+			c := &node{nonterm: nExpr, token: t}
+			for i := len(nodes) - arity - 1; i < len(nodes); i++ {
+				c.addChild(nodes[i])
 			}
-			if len(nodes) < n {
-				log.Fatal("Invalid expression, not enough arguments")
-			}
-			root := &node{
-				nonterm: nExpr,
-				token:   t,
-			}
-			for j := 0; j < n; j++ {
-				root.addChild(nodes[len(nodes)-1])
-				nodes = nodes[:len(nodes)-1]
-			}
-			subExpr = len(nodes)
-			nodes = append(nodes, root)
-			continue
+			nodes[len(nodes)-arity-1] = c
+			nodes = nodes[:len(nodes)-arity-1]
+		default:
+			break loop
+		}
+	}
+	if len(nodes) == 0 {
+		p.tCur = tSaved
+		return nil
+	} else if len(nodes) > 1 {
+		p.parseErr(&p.tokens[p.tCur], "Invalid expression")
+	}
+	return nodes[0]
+}
+
+func (p *parser) parseFuncCall() (n *node) {
+	if t, ok := p.getToken(0); !ok || t.terminal != tLeftParen {
+		return
+	}
+	p.tCur++
+	n = &node{nonterm: nFuncCall}
+	for {
+		if c := p.parseExpr(); c != nil {
+			n.addChild(c)
 		} else {
-			p.tIndex--
 			break
 		}
 	}
-	if subExpr == -1 && funcCall <= 0 {
-		if len(nodes) >= 1 {
-			root := &node{nonterm: nExpr}
-			root.addChild(nodes[0])
-			p.tIndex -= len(nodes) - 1
-			p.cur = root
-			return true
-		} else {
-			p.tIndex = tIndex
-			return false
-		}
-	} else if subExpr == 0 {
-		p.tIndex -= len(nodes) - 1
-		p.cur = nodes[0]
-		return true
+	if len(n.child) == 0 || n.child[len(n.child)-1].child[0].terminal != tIdentifier {
+		p.parseErr(&p.tokens[p.tCur-1], "Invalid function call: no identifier")
 	}
-	p.parseErr(p.list[tIndex], "Invalid expression")
-	return false
+	if t, ok := p.getToken(0); !ok || t.terminal != tRightParen {
+		p.parseErr(t, "Invalid function call")
+	}
+	p.tCur++
+	return
 }
-
-func (p *parser) parseFunc_call() bool {
-	if t, ok := p.getToken(0); !ok || t.lexeme != "(" {
-		return false
-	}
-	p.tIndex++
-	root := &node{nonterm: nFunc_call}
-	for p.parseExpr() {
-		root.addChild(p.cur)
-	}
-	if len(root.child) == 0 || root.child[len(root.child)-1].child[0].token.terminal != tIdentifier || len(root.child[len(root.child)-1].child) != 1 {
-		log.Fatal("Invalid function call: no identifier")
-	}
-	if t, ok := p.getToken(0); !ok || t.lexeme != ")" {
-		log.Fatal("Invalid function call")
-	}
-	p.tIndex++
-	p.cur = root
-	return true
-}
-
-
-
-*/

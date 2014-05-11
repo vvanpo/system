@@ -8,11 +8,8 @@ import (
 
 func main() {
 	tokens := lex(os.Stdin)
-	for t := range tokens {
-		printToken(t)
-	}
-	//tree := parse(tokens)
-	//printTree(tree)
+	tree := parse(tokens)
+	printTree(tree)
 }
 
 func printToken(t token) {
@@ -23,8 +20,11 @@ func printTree(n *node) {
 	var recurse func(n *node, indent int)
 	recurse = func(n *node, indent int) {
 		tab := strings.Repeat("  ", indent)
-		t := n.token
-		fmt.Printf("%s%d: %s\n", tab, n.nonterm, t.lexeme)
+		val := ""
+		if n.token != nil {
+			val = n.lexeme
+		}
+		fmt.Printf("%s%d: %s\n", tab, n.nonterm, val)
 		for i := range n.child {
 			recurse(n.child[i], indent+1)
 		}
