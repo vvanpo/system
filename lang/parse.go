@@ -92,6 +92,7 @@ func (p *parser) nextToken() bool {
 	if !ok {
 		return false
 	}
+	printToken(t)
 	p.tokens = append(p.tokens, t)
 	return true
 }
@@ -129,23 +130,23 @@ func (p *parser) parseFile() (n *node) {
 func (p *parser) parseStmt() (n *node) {
 	stmt := func(f func() *node) bool {
 		if s := f(); s != nil {
+			if t, ok := p.getToken(0); ok && t.terminal != tNewline {
+				return false
+			}
+			p.tCur++
 			if n != nil {
 				n.addChild(s)
 			} else {
 				n = s
 			}
-			if t, ok := p.getToken(0); ok && t.terminal != tNewline {
-				p.parseErr(t, "Invalid statement")
-			}
-			p.tCur++
 			return true
 		}
 		return false
 	}
+	tSaved := p.tCur
 	if stmt(p.parseAliasStmt) {
 		return
 	}
-	tSaved := p.tCur
 	n = p.parseLabel()
 	if n != nil {
 		p.curNameSpace = append(p.curNameSpace, n.lexeme)
@@ -182,13 +183,17 @@ func (p *parser) parseFuncDef() (n *node) {
 			p.parseErr(t, "Invalid function definition")
 		}
 	}
+	t, ok = p.getToken(0)
 	// Block node
-	if c := p.parseBlock(); c != nil {
-		n.addChild(c)
-	} else {
-		p.parseErr(t, "Invalid function definition")
+	if ok && t.terminal == tNewline {
+		p.tCur++
+		if c := p.parseBlock(); c != nil {
+			n.addChild(c)
+			return
+		}
 	}
-	return
+	p.parseErr(t, "Invalid function definition")
+	return nil
 }
 
 func (p *parser) parseBlock() (n *node) {
@@ -251,6 +256,7 @@ func (p *parser) parseAutoVarStmt() (n *node) {
 }
 
 func (p *parser) parseAliasStmt() (n *node) {
+	tSaved := p.tCur
 	n = &node{nonterm: nAliasStmt}
 	if c := p.parseParam(); c != nil {
 		n.addChild(c)
@@ -258,11 +264,13 @@ func (p *parser) parseAliasStmt() (n *node) {
 		return nil
 	}
 	if t, ok := p.getToken(0); !ok || t.terminal != tAlias {
+		p.tCur = tSaved
 		return nil
 	}
 	if c := p.parseExpr(); c != nil {
 		n.addChild(c)
 	} else {
+		p.tCur = tSaved
 		return nil
 	}
 	p.tCur++
