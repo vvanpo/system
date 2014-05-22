@@ -1,0 +1,19 @@
+
+1-to-1 mapping of bytecode <-> language syntax/semantics
+
+	- bytecode hence includes symbol table
+	- Build a bytecode compiler to C and/or ELF/SysV
+	- Build a virtual machine for ELF/SysV?
+
+
+Bytecode compiler:
+
+	- Warnings default to compilation error, must be turned off individually to complete compilation with warnings
+		- Endian-specific code generates a warning, compiler must be able to catch:
+			- word-sized operations on addresses with byte-assigned data, or
+			- byte-sized operations on addresses with word-assigned data
+
+
+
+
+
