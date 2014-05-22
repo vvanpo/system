@@ -64,17 +64,36 @@ type symbol struct {
 type literal []byte
 
 type bytecodeFile struct {
-	wordLength  uint         // Minimum word-length is decided on using the largest memory
-	identifier  []identifier // reference made in the compiled code.  Literals that exceed
-	symbol      []symbol     // this value are converted to block types
-	imported    []*identifier
-	literal     []literal
-	textPointer uint // Beginning of text segment special variable "_text"
-	dataPointer uint // Beginning of data/heap segment special variable "_data"
+	wordLength uint         // Minimum word-length is decided on using the largest memory
+	identifier []identifier // reference made in the compiled code.  Literals that exceed
+	symbol     []symbol     // this value are converted to block types
+	imported   []symbol
+	literal    []literal
 }
 
 func newBytecodeFile() (b *bytecodeFile) {
 	b = new(bytecodeFile)
+	b.identifier = []identifier{"_", "_sp", "_fp", "_ip", "_text", "_data"}
+	return
+}
+
+func (b *bytecodeFile) addIdentifier(ident string) *identifier {
+	for _, i := range b.identifier {
+		if i == identifier(ident) {
+			return &i
+		}
+	}
+	b.identifier = append(b.identifier, identifier(ident))
+	return &b.identifier[len(b.identifier)-1]
+}
+
+func (b *bytecodeFile) addSymbol(ident string, address uint, parent *symbol) (s *symbol) {
+	s = new(symbol)
+	s.identifier = b.addIdentifier(ident)
+	s.address = address
+	s.parent = parent
+	b.symbol = append(b.symbol, *s)
+	return
 }
 
 // Assumes big-endian ordering of words (most-significant word passed in as first argument)
