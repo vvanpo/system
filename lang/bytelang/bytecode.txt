@@ -28,13 +28,14 @@ Symbol namespaces:
 
 Bytecode grammar:
 
-	file = pseudo_architecture, identifier_list, symbol_table, import_table, start_bytecode, literal_list
+	file = header, identifier_list, symbol_table, import_table, start_bytecode, literal_list
 
-	pseudo_architecture = ( "0" ... "9" )+ "\n"
+	header = "Version 0.1\nArch.: ", pseudo_architecture, "\n"
+		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"
 	identifier_list = special_identifiers, ( identifier, "\n" )+
-	symbol_table = special_symbols, ( identifier_number, address )+
-	import_table = ( identifier_number )*
-	start_bytecode = ( SymbolDef )+
+	symbol_table = number, special_symbols, ( identifier_number, address )+
+	import_table = number, ( identifier_number )*
+	start_bytecode = number, ( SymbolDef )+
 	literal_list = ( number, number+ )*
 
 	SymbolDef = bSymbolDef, number, ( Automatic | Address | Offset )

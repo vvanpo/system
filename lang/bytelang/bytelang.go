@@ -4,10 +4,9 @@ import (
 	"bytes"
 )
 
-// Bytecodes are ordered by expected rate of incidence to aid compression
 const (
 	bError     byte = iota
-	bSymbolDef          // Namespace decided by nesting within bFunction declarations or bBlock* structures
+	bSymbolDef      // Namespace decided by nesting within bFunction declarations or bBlock* structures
 	bWord
 	bByte
 	bBlockWord
@@ -57,22 +56,22 @@ type symbol struct {
 	parent  *symbol
 }
 
-// Literals are encoded as sequences of bytes, until the minimum word-length (bytecodeFile.wordLength) can be established
+// Literals are encoded as sequences of bytes, until the minimum word-length (bytelang.wordLength) can be established
 // The byte slice uses big-endian ordering, which is also the representation used in the compiled bytecode file
 type literal []byte
 
-type bytecodeFile struct {
-	wordLength uint         // Minimum word-length is decided on using the largest memory
-	identifier []identifier // reference made in the compiled code.  Literals that exceed
-	symbol     []symbol     // this value are converted to block types
-	imported   []symbol
-	literal    []literal
-	code       []byte
-	currentNamespace  *symbol
+type bytelang struct {
+	wordLength       uint         // Minimum word-length is decided on using the largest memory
+	identifier       []identifier // reference made in the compiled code.  Literals that exceed
+	symbol           []symbol     // this value are converted to block types
+	imported         []symbol
+	literal          []literal
+	code             []byte
+	currentNamespace *symbol
 }
 
-func newBytecodeFile() (b *bytecodeFile) {
-	b = new(bytecodeFile)
+func newBytecodeFile() (b *bytelang) {
+	b = new(bytelang)
 	b.identifier = []identifier{"_", "_sp", "_fp", "_ip", "_text", "_data"}
 	for _, i := range b.identifier {
 		b.addSymbol(i, 0, nil)
@@ -80,7 +79,7 @@ func newBytecodeFile() (b *bytecodeFile) {
 	return
 }
 
-func (b *bytecodeFile) addIdentifier(ident identifier) *identifier {
+func (b *bytelang) addIdentifier(ident identifier) *identifier {
 	for _, i := range b.identifier {
 		if i == ident {
 			return &i
@@ -90,7 +89,7 @@ func (b *bytecodeFile) addIdentifier(ident identifier) *identifier {
 	return &b.identifier[len(b.identifier)-1]
 }
 
-func (b *bytecodeFile) addSymbol(ident identifier, address uint, parent *symbol) (s *symbol) {
+func (b *bytelang) addSymbol(ident identifier, address uint, parent *symbol) (s *symbol) {
 	s = new(symbol)
 	s.identifier = b.addIdentifier(ident)
 	s.address = address
@@ -100,7 +99,7 @@ func (b *bytecodeFile) addSymbol(ident identifier, address uint, parent *symbol)
 }
 
 // Assumes big-endian ordering of words (most-significant word passed in as first argument)
-func (b *bytecodeFile) addWordLiteral(l ...uint) {
+func (b *bytelang) addWordLiteral(l ...uint) {
 	lit := convertBigEndian(l...)
 	for _, v := range b.literal {
 		if bytes.Equal(lit, v) {
@@ -111,7 +110,7 @@ func (b *bytecodeFile) addWordLiteral(l ...uint) {
 }
 
 // Assumes big-endian ordering of bytes
-func (b *bytecodeFile) addByteLiteral(l ...byte) {
+func (b *bytelang) addByteLiteral(l ...byte) {
 	for _, v := range b.literal {
 		if bytes.Equal(l, v) {
 			return
@@ -120,15 +119,15 @@ func (b *bytecodeFile) addByteLiteral(l ...byte) {
 	b.literal = append(b.literal, l)
 }
 
-func (b *bytecodeFile) addWord(w uint) {
+func (b *bytelang) addWord(w uint) {
 	w = convertBigEndian(w)
-	for uint(len(w)) < b.wordLength / 8 {
+	for uint(len(w)) < b.wordLength/8 {
 		w = append([]byte{0}, w...)
 	}
 	b.code = append(b.code, w...)
 }
 
-func (b *bytecodeFile) addSymbolDef(s string) {
+func (b *bytelang) addSymbolDef(s string) {
 	i := uint(len(b.symbol))
 	b.currentNamespace = b.addSymbol(identifier(s), uint(len(b.code)), b.currentNamespace)
 	b.code = append(b.code, bSymbolDef)
@@ -147,4 +146,3 @@ func convertBigEndian(n ...uint) []byte {
 	}
 	return num
 }
-
