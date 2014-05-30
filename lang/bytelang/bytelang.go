@@ -4,6 +4,8 @@ import (
 	"bytes"
 )
 
+var _ bytes.Buffer // FOR DEBUGGING
+
 const (
 	bError     byte = iota
 	bSymbolDef      // Namespace decided by nesting within bFunction declarations or bBlock* structures
@@ -60,6 +62,7 @@ type symbol struct {
 // The byte slice uses big-endian ordering, which is also the representation used in the compiled bytecode file
 type literal []byte
 
+/*
 type bytelang struct {
 	wordLength       uint         // Minimum word-length is decided on using the largest memory
 	identifier       []identifier // reference made in the compiled code.  Literals that exceed
@@ -146,3 +149,4 @@ func convertBigEndian(n ...uint) []byte {
 	}
 	return num
 }
+*/

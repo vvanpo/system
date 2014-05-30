@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	f := os.Open(os.Args[1])
+	f, _ := os.Open(os.Args[1])
 	vm := newVirtual(f)
 	vm.run()
 }

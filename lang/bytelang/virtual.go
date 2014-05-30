@@ -12,8 +12,9 @@ type virtual struct {
 func newVirtual(r io.Reader) (vm *virtual) {
 	vm = new(virtual)
 	vm.parser = newParser(r)
+	return
 }
 
 func (vm *virtual) run() {
-
+	vm.parseFile()
 }
