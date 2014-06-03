@@ -42,6 +42,8 @@ const (
 	bRotateRightOp
 )
 
+const specialIdentifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
+
 //	Special values are special references via the symbol table, starting from the beginning of the table
 //	bDiscard				//	Assignment results in nothing, identifier "_"
 //	bStackPointer			//	Top of stack special register, identifier "_sp"
