@@ -51,9 +51,9 @@ Bytecode grammar:
 		Declaration = ( bWord | bByte | BlockWord | BlockByte | Function )
 			BlockWord = bBlockWord, number
 			BlockByte = bBlockByte, number
-			Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval> ( bWord | bByte | BlockWord | Blockyte )* number bytecode
-				bytecode = ( If | Assignment | Jump | Return )+
-					If = Expression, number, bytecode
+			Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval> ( bWord | bByte | BlockWord | Blockyte )* number Statements 
+				Statements = ( If | Assignment | Jump | Return )+
+					If = Expression, number, Statements
 					Assignment = number_assignees, number+, Expression
 					Jump = bJump, Expression
 					Return = bReturn

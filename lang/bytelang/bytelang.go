@@ -1,11 +1,5 @@
 package main
 
-import (
-	"bytes"
-)
-
-var _ bytes.Buffer // FOR DEBUGGING
-
 const (
 	bError     byte = iota
 	bSymbolDef      // Namespace decided by nesting within bFunction declarations or bBlock* structures
@@ -42,38 +36,70 @@ const (
 	bRotateRightOp
 )
 
-const specialIdentifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
-
-//	Special values are special references via the symbol table, starting from the beginning of the table
+// The special identifiers belong to the current namespace, and have an address offset of 0
 //	bDiscard				//	Assignment results in nothing, identifier "_"
 //	bStackPointer			//	Top of stack special register, identifier "_sp"
 //	bFramePointer			//	Frame pointer special register, identifier "_fp"
 //	bInstructionPointer		//	Current instruction special register, identifer "_ip"
 //	bTextPointer			//	Beginning of text segment special variable "_text"
 //	bDataPointer			//	Beginning of data/heap segment special variable "_data"
+const specialIdentifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
 
 type identifier string
-
-type symbol struct {
-	*identifier
-	address uint
-	parent  *symbol
-}
 
 // Literals are encoded as sequences of bytes, until the minimum word-length (bytelang.wordLength) can be established
 // The byte slice uses big-endian ordering, which is also the representation used in the compiled bytecode file
 type literal []byte
 
-/*
-type bytelang struct {
-	wordLength       uint         // Minimum word-length is decided on using the largest memory
-	identifier       []identifier // reference made in the compiled code.  Literals that exceed
-	symbol           []symbol     // this value are converted to block types
-	imported         []symbol
-	literal          []literal
-	code             []byte
-	currentNamespace *symbol
+type symbol struct {
+	*identifier
+	address uint    // Address is an offset to the base namespace address, as pointed to by symbol.parent (0 if parent = nil)
+	parent  *symbol // Parent namespace
+	object			// Syntax object
 }
+
+type object interface {
+	action()
+}
+
+func (s *symbol) action() {
+	// TODO: add itself to symbol list
+}
+
+type variable struct {
+	*symbol
+	length // Length in bytes
+}
+
+func (v *variable) action() {
+	// TODO: initialize as zero
+}
+
+type function struct {
+	*symbol
+	local []*variable // Local variables
+	ret   []*variable // Return variables
+	stmt  []*object // Statement list
+}
+
+func (f *function) action() {
+	// TODO: 
+}
+
+type expression interface {
+	evaluate()
+}
+
+type ifStmt struct {
+	expr	expression
+	stmt	[]statement
+}
+
+type assignmentStmt struct {
+	
+}
+
+/*
 
 func newBytecodeFile() (b *bytelang) {
 	b = new(bytelang)

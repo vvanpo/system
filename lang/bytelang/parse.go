@@ -7,19 +7,10 @@ import (
 	"unicode"
 )
 
-type tree struct {
-	child []*tree
-}
-
-func (t *tree) add(child *tree) {
-	t.child = append(t.child, child)
-}
-
 type parser struct {
 	*bytes.Buffer
 	fileLen    int64
 	wordLen    int // Bytes per word
-	syntaxTree *tree
 	identifier []identifier
 	symbol     []symbol
 	imported   []*symbol
@@ -160,7 +151,6 @@ func (p *parser) parseStartBytecode() {
 	if n == 0 {
 		log.Fatal("Missing definition statement")
 	}
-	p.syntaxTree = new(tree)
 	for ; n > 0; n-- {
 		p.parseSymbolDef()
 	}
@@ -193,4 +183,8 @@ func (p *parser) parseSymbolDef() {
 	default:
 		log.Fatal("Invalid definition statement")
 	}
+}
+
+func (p *parser) parseOffset() {
+
 }
