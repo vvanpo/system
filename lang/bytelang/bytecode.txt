@@ -51,10 +51,10 @@ Bytecode grammar:
 		Declaration = ( bWord | bByte | BlockWord | BlockByte | Function )
 			BlockWord = bBlockWord, number
 			BlockByte = bBlockByte, number
-			Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval> ( bWord | bByte | BlockWord | Blockyte )* number Statements 
-				Statements = ( If | Assignment | Jump | Return )+
-					If = Expression, number, Statements
-					Assignment = number_assignees, number+, Expression
+			Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval> ( bWord | bByte | BlockWord | Blockyte )* number Statement+
+				Statement = If | Assignment | Jump | Return
+					If = Expression, number, Statement+
+					Assignment = number, Expression+
 					Jump = bJump, Expression
 					Return = bReturn
 		Expression = bExpression, ( Literal | SymbolRef | FunctionCall | Operation )

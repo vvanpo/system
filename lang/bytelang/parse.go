@@ -15,6 +15,11 @@ type parser struct {
 	symbol     []symbol
 	imported   []*symbol
 	literal    []literal
+	tree       struct { // Syntax tree
+		root         *object
+		cur          *object
+		curNamespace *symbol
+	}
 }
 
 func newParser(r io.Reader) (p *parser) {
@@ -172,17 +177,26 @@ func (p *parser) parseSymbolDef() {
 		log.Fatal("Invalid definition statement")
 	}
 	n := p.getWord()
+	p.symbol[n-1].parent = p.tree.curNamespace
+	p.tree.curNamespace = &p.symbol[n-1]
 	switch p.next() {
 	case bAutomatic:
-		p.parseDeclaration()
+		p.parseAutomatic()
 	case bAddress:
-		p.parseDeclaration()
-		p.parseExpression()
+		p.parseAddress()
 	case bOffset:
 		p.parseOffset()
 	default:
 		log.Fatal("Invalid definition statement")
 	}
+}
+
+func (p *parser) parseAutomatic() {
+
+}
+
+func (p *parser) parseAddress() {
+
 }
 
 func (p *parser) parseOffset() {
