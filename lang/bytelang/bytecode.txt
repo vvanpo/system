@@ -46,17 +46,17 @@ Bytecode grammar:
 
 	Statement = VariableDef | If | Assignment | Jump | Return
 		VariableDef = bVariableDef, Declaration, variable_number, number
-			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte | Function )
+			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte )
 				BlockWord = bBlockWord, number
 				BlockByte = bBlockByte, number
-				Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )*, number_retval, ( bWord | bByte | BlockWord | Blockyte )*, statement_list
 		If = bIf, Expression, statement_list
-		Assignment = bAssignment, number, variable_number+, Expression
+		Assignment = bAssignment, number, variable_number+, ( Expression | Function)
 		Jump = bJump, Expression
 		Return = bReturn
+			Function = bFunction, number_params, VariableDef*, number_retval, ( bWord | bByte | BlockWord | Blockyte )*, statement_list
 			Expression = bExpression, ( Literal | VariableRef | FunctionCall | Operation )
 				Literal = bLiteral, number
-				VariableRef = bVariableRef, number
+				VariableRef = bVariableRef, variable_number
 				FunctionCall = bFunctionCall, ( VariableRef | Function ), Expression+
 				Operation = ( bReferenceOp
 							| bDereferenceOp

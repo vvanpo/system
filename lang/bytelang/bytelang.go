@@ -76,24 +76,38 @@ type statement interface {
 	action()
 }
 
+type variableDefStmt struct{}
+
+func (v *variableDefStmt) action() {
+}
+
 type ifStmt struct {
-	expr []*expression // Condition
-	stmt []statement   // Statement body
+	expr []expression // Condition
+	stmt []statement  // Statement body
+}
+
+func (i *ifStmt) action() {
 }
 
 type assignmentStmt struct {
 	assignee []*variable
-	expr     *expression
+	expr     expression
 }
 
 func (a *assignmentStmt) action() {
 }
 
 type jumpStmt struct {
-	expr *expression
+	expr expression
+}
+
+func (j *jumpStmt) action() {
 }
 
 type returnStmt struct{}
+
+func (r *returnStmt) action() {
+}
 
 type expression interface {
 	evaluate() []byte

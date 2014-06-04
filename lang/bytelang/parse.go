@@ -58,6 +58,10 @@ func (p *parser) getWord() (word uint) {
 	return
 }
 
+func (p *parser) getVariable(n uint) *variable {
+	return &p.variable[n-1]
+}
+
 func (p *parser) next() (c byte) {
 	c, err := p.ReadByte()
 	if err != nil {
@@ -71,7 +75,7 @@ func (p *parser) parseBytelang() {
 	p.parseIdentifierList()
 	p.parseVariableTable()
 	p.parseImportTable()
-	p.parseStatementList()
+	p.start.stmt = p.parseStatementList()
 	p.parseLiteralList()
 }
 
@@ -137,18 +141,19 @@ func (p *parser) parseVariableTable() {
 func (p *parser) parseImportTable() {
 	for n := p.getWord(); n > 0; n-- {
 		v := p.getWord()
-		p.imported = append(p.imported, &p.variable[v-1])
+		p.imported = append(p.imported, p.getVariable(v))
 	}
 }
 
-func (p *parser) parseStatementList() {
+func (p *parser) parseStatementList() (s []statement) {
 	n := p.getWord()
 	if n == 0 {
 		log.Fatal("Missing statement")
 	}
 	for ; n > 0; n-- {
-		p.parseStatement()
+		s = append(s, p.parseStatement())
 	}
+	return
 }
 
 func (p *parser) parseLiteralList() {
@@ -162,34 +167,37 @@ func (p *parser) parseLiteralList() {
 	}
 }
 
-func (p *parser) parseStatement() {
+func (p *parser) parseStatement() (s statement) {
 	switch p.next() {
 	case bVariableDef:
-		p.parseVariableDef()
+		s = p.parseVariableDef()
 	case bIf:
-		p.parseIf()
+		s = p.parseIf()
 	case bAssignment:
-		p.parseAssignment()
+		s = p.parseAssignment()
 	case bJump:
-		p.parseJump()
+		s = p.parseJump()
 	case bReturn:
-		p.parseReturn()
+		s = p.parseReturn()
 	default:
 		log.Fatal("Invalid statement")
 	}
+	return
 }
 
-func (p *parser) parseVariableDef() {
+func (p *parser) parseVariableDef() statement {
+	s := new(variableDefStmt)
 	v := p.parseDeclaration()
 	p.cur.local = append(p.cur.local, v)
 	v.scope = p.cur
-	v.base = &p.variable[p.getWord()-1]
+	v.base = p.getVariable(p.getWord())
 	v.offset = int(p.getWord())
+	return s
 }
 
 func (p *parser) parseDeclaration() (v *variable) {
 	n := p.getWord() // Variable number
-	v = &p.variable[n-1]
+	v = p.getVariable(n)
 	switch p.next() {
 	case bWord:
 		v.refLength = p.wordLength
@@ -203,38 +211,37 @@ func (p *parser) parseDeclaration() (v *variable) {
 	case bBlockByte:
 		v.refLength = 1
 		v.length = p.getWord()
-	case bFunction:
-		v.refLength = p.wordLength
-		v.length = 1
-		p.parseFunction(v)
+	default:
+		log.Fatal("Invalid variable declaration")
 	}
 	return
 }
 
-func (p *parser) parseFunction(v *variable) {
-	
-}
-
-func (p *parser) parseIf() {
+func (p *parser) parseIf() statement {
+	s := new(ifStmt)
 	p.parseExpression()
-	p.parseStatementList()
+	s.stmt = p.parseStatementList()
+	return s
 }
 
-func (p *parser) parseAssignment() {
+func (p *parser) parseAssignment() statement {
 	s := new(assignmentStmt)
-	p.cur.stmt = append(p.cur.stmt, s)
 	for n := p.getWord(); n > 0; n-- {
 		v := p.getWord()
-		s.assignee = append(s.assignee, &p.variable[v-1])
+		s.assignee = append(s.assignee, p.getVariable(v))
 	}
 	p.parseExpression()
+	return s
 }
 
-func (p *parser) parseJump() {
+func (p *parser) parseJump() statement {
+	s := new(jumpStmt)
 	p.parseExpression()
+	return s
 }
 
-func (p *parser) parseReturn() {
+func (p *parser) parseReturn() statement {
+	return new(returnStmt)
 }
 
 func (p *parser) parseExpression() {
@@ -260,4 +267,13 @@ func (p *parser) parseVariableRef() {
 
 func (p *parser) parseFunctionCall() {
 
+}
+
+func (p *parser) parseFunction(v *variable) {
+	f := &function{bind: v}
+	p.cur = f
+	for n := p.getWord(); n > 0; n-- {
+		p.parseVariableDef()
+	}
+	p.cur = v.scope
 }
