@@ -41,7 +41,7 @@ Bytecode grammar:
 	identifier_list = number, special_identifiers, ( identifier, "\n" )*
 	variable_table = number, special_variables, ( identifier_number )*
 	import_table = number, ( variable_number )*
-	start_bytecode = number, Statement+
+	statement_list = number, Statement+
 	literal_list = ( number, number+ )*
 
 	Statement = VariableDef | If | Assignment | Jump | Return
@@ -52,8 +52,8 @@ Bytecode grammar:
 			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte | Function )
 				BlockWord = bBlockWord, number
 				BlockByte = bBlockByte, number
-				Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval ( bWord | bByte | BlockWord | Blockyte )* number Statement+
-		If = bIf, Expression, number, Statement+
+				Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval ( bWord | bByte | BlockWord | Blockyte )*, statement_list
+		If = bIf, Expression, statement_list
 		Assignment = bAssignment, number, variable_number+, Expression
 		Jump = bJump, Expression
 		Return = bReturn

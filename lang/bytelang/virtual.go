@@ -16,5 +16,5 @@ func newVirtual(r io.Reader) (vm *virtual) {
 }
 
 func (vm *virtual) run() {
-	vm.parseFile()
+	vm.parseBytelang()
 }

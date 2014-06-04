@@ -9,23 +9,19 @@ import (
 
 type parser struct {
 	*bytes.Buffer
-	fileLen    int64
-	wordLen    int // Bytes per word
-	identifier []identifier
-	variable   []variable
-	imported   []*variable // Index into variable list
-	literal    []literal
+	bytelang
+	cur *function // Function scope tracking during parsing
 }
 
 func newParser(r io.Reader) (p *parser) {
-	n, err := p.ReadFrom(r)
+	_, err := p.ReadFrom(r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	p = &parser{
-		Buffer:  new(bytes.Buffer),
-		fileLen: n,
+		Buffer: new(bytes.Buffer),
 	}
+	p.cur = &p.start
 	return
 }
 
@@ -52,12 +48,12 @@ func (p *parser) addVariable(idNumber int) {
 }
 
 func (p *parser) getWord() (word uint) {
-	b := p.Next(p.wordLen)
-	if len(b) < p.wordLen {
+	b := p.Next(p.wordLength)
+	if len(b) < p.wordLength {
 		log.Fatal("Not enough bytes in datastream to fill word")
 	}
 	for i := range b {
-		word |= uint(b[i]) << (8 * uint(p.wordLen-i-1))
+		word |= uint(b[i]) << (8 * uint(p.wordLength-i-1))
 	}
 	return
 }
@@ -70,12 +66,12 @@ func (p *parser) next() (c byte) {
 	return
 }
 
-func (p *parser) parseFile() {
+func (p *parser) parseBytelang() {
 	p.parseHeader()
 	p.parseIdentifierList()
 	p.parseVariableTable()
 	p.parseImportTable()
-	p.parseStartBytecode()
+	p.parseStatementList()
 	p.parseLiteralList()
 }
 
@@ -92,7 +88,7 @@ func (p *parser) parseHeader() {
 		if c[i] < byte('0') || c[i] > byte('9') {
 			break
 		}
-		p.wordLen = (p.wordLen * 10) + int(c[i]-byte('0'))
+		p.wordLength = (p.wordLength * 10) + int(c[i]-byte('0'))
 	}
 	match = "bytes/word\n"
 	if match != string(p.Next(len(match))) {
@@ -144,8 +140,14 @@ func (p *parser) parseImportTable() {
 	}
 }
 
-func (p *parser) parseStartBytecode() {
-	p.parseStatementList()
+func (p *parser) parseStatementList() {
+	n := p.getWord()
+	if n == 0 {
+		log.Fatal("Missing statement")
+	}
+	for ; n > 0; n-- {
+		p.parseStatement()
+	}
 }
 
 func (p *parser) parseLiteralList() {
@@ -156,16 +158,6 @@ func (p *parser) parseLiteralList() {
 		for i := 0; i < int(n); i++ {
 			lit[i] = p.next()
 		}
-	}
-}
-
-func (p *parser) parseStatementList() {
-	n := p.getWord()
-	if n == 0 {
-		log.Fatal("Missing statement")
-	}
-	for ; n > 0; n-- {
-		p.parseStatement()
 	}
 }
 
@@ -210,21 +202,21 @@ func (p *parser) parseDeclaration() (v *variable) {
 	v = &p.variable[n-1]
 	switch p.next() {
 	case bWord:
-		v.refLength = p.wordLen
-		v.length = uint(p.wordLen)
+		v.refLength = p.wordLength
+		v.length = uint(p.wordLength)
 	case bByte:
 		v.refLength = 1
 		v.length = 1
 	case bBlockWord:
-		v.refLength = p.wordLen
+		v.refLength = p.wordLength
 		v.length = p.getWord()
 	case bBlockByte:
 		v.refLength = 1
 		v.length = p.getWord()
 	case bFunction:
-		v.refLength = p.wordLen
-		v.length = uint(p.wordLen)
-		p.parseFunction()
+		v.refLength = p.wordLength
+		v.length = uint(p.wordLength)
+		p.parseFunction(v)
 	}
 	return
 }

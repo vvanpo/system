@@ -34,14 +34,24 @@ const (
 	bRotateRightOp
 )
 
-// The special identifiers belong to the current namespace, and have an address offset of 0
-//	bDiscard				//	Assignment results in nothing, identifier "_"
+// The special identifiers belong to the top namespace
+//	bDiscard				//	Assignment results in no-op, identifier "_"
 //	bStackPointer			//	Top of stack special register, identifier "_sp"
 //	bFramePointer			//	Frame pointer special register, identifier "_fp"
 //	bInstructionPointer		//	Current instruction special register, identifer "_ip"
 //	bTextPointer			//	Beginning of text segment special variable "_text"
 //	bDataPointer			//	Beginning of data/heap segment special variable "_data"
 const specialIdentifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
+
+// Representation of a bytelang file
+type bytelang struct {
+	wordLength int          // Bytes per word
+	identifier []identifier // Identifier list
+	variable   []variable   // Variable list, indexes into identifier list
+	imported   []*variable  // Imported variables, indexes into variable list
+	start      function     // Top-level scope, program exit on return
+	literal    []literal    // List of literals
+}
 
 type identifier string
 
@@ -85,7 +95,7 @@ type expression interface {
 	evaluate() []byte
 }
 
-// Literals are encoded as sequences of bytes, until the minimum word-length (bytelang.wordLength) can be established
+// Literals, as with all variable values, are encoded as sequences of bytes
 // The byte slice uses big-endian ordering, which is also the representation used in the compiled bytecode file
 type literal []byte
 
