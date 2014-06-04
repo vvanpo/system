@@ -2,13 +2,11 @@ package main
 
 const (
 	bError byte = iota
+	bVariableDef
 	bWord
 	bByte
 	bBlockWord
 	bBlockByte
-	bAutomatic // Allocate automatic variable on the stack
-	bAddress   // Index into specific address value
-	bOffset    // Must be an offset into a bBlock* structure.  Variable numbers start with parameters, then return values, then local variables
 	bFunction
 	bIf
 	bAssignment
@@ -59,14 +57,18 @@ type variable struct {
 	*identifier
 	parent    *variable // Parent namespace
 	scope     *function
-	refLength int  // Reference granularity in bytes, e.g. for bWord refLength = p.wordLen
-	length    uint // Length in bytes, same as refLength if bByte or bWord
+	refLength int       // Reference granularity in bytes, e.g. for bWord refLength = bytelang.wordLength
+	length    uint      // Length in terms of refLength
+	base      *variable // Base address
+	// Automatic variables will use _fp
+	// Address aliases (heap variables) will use _data
+	// Function aliases will use _text
+	offset int // Address offset from base
 }
 
 type function struct {
 	bind  *variable   // Binding variable
 	param []*variable // Parameters
-	ret   []*variable // Return variables
 	local []*variable // Local variables
 	stmt  []statement // Statement list
 }
@@ -83,6 +85,9 @@ type ifStmt struct {
 type assignmentStmt struct {
 	assignee []*variable
 	expr     *expression
+}
+
+func (a *assignmentStmt) action() {
 }
 
 type jumpStmt struct {

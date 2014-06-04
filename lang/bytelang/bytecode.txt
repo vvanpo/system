@@ -34,7 +34,7 @@ Variable namespaces:
 
 Bytecode grammar:
 
-	file = header, identifier_list, variable_table, import_table, start_bytecode, literal_list
+	file = header, identifier_list, variable_table, import_table, statement_list, literal_list
 
 	header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
 		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"
@@ -45,14 +45,11 @@ Bytecode grammar:
 	literal_list = ( number, number+ )*
 
 	Statement = VariableDef | If | Assignment | Jump | Return
-		VariableDef = Automatic | Address | Offset
-			Automatic = bAutomatic, Declaration
-			Address = bAddress, Declaration, Expression
-			Offset = bOffset, Declaration, variable_number, offset_number
+		VariableDef = bVariableDef, Declaration, variable_number, number
 			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte | Function )
 				BlockWord = bBlockWord, number
 				BlockByte = bBlockByte, number
-				Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval ( bWord | bByte | BlockWord | Blockyte )*, statement_list
+				Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )*, number_retval, ( bWord | bByte | BlockWord | Blockyte )*, statement_list
 		If = bIf, Expression, statement_list
 		Assignment = bAssignment, number, variable_number+, Expression
 		Jump = bJump, Expression
@@ -79,7 +76,6 @@ Bytecode grammar:
 	identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
 	identifier_number = number
 	variable_number = number
-	offset_number = number
 	address = number
 	number = WORD
 	number_params = BYTE
@@ -87,3 +83,18 @@ Bytecode grammar:
 
 	special_identifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
 	special_variables = 1, 2, 3, 4, 5, 6 // Each value 1 word in width
+
+Stack frame diagram:
+
+	caller_local
+	-----
+	args
+	fp
+	ret
+	-----
+	callee_local
+	
+	Return variables are local variables of the caller, and are allocated
+	before the function call.  They can even be used and assigned before the
+	function call, but are overwritten during the call.
+

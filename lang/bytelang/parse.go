@@ -58,6 +58,15 @@ func (p *parser) getWord() (word uint) {
 	return
 }
 
+func (p *parser) getVariable(id string) *variable {
+	for _, v := range p.variable {
+		if *v.identifier == identifier(id) {
+			return &v
+		}
+	}
+	return nil
+}
+
 func (p *parser) next() (c byte) {
 	c, err := p.ReadByte()
 	if err != nil {
@@ -123,6 +132,7 @@ func (p *parser) parseIdentifierList() {
 
 func (p *parser) parseVariableTable() {
 	n := p.getWord()
+	// Add special variables
 	for i := range p.identifier {
 		p.addVariable(i + 1)
 		n--
@@ -135,8 +145,8 @@ func (p *parser) parseVariableTable() {
 
 func (p *parser) parseImportTable() {
 	for n := p.getWord(); n > 0; n-- {
-		variable := p.getWord()
-		p.imported = append(p.imported, &p.variable[variable-1])
+		v := p.getWord()
+		p.imported = append(p.imported, &p.variable[v-1])
 	}
 }
 
@@ -163,12 +173,8 @@ func (p *parser) parseLiteralList() {
 
 func (p *parser) parseStatement() {
 	switch p.next() {
-	case bAutomatic:
-		p.parseAutomatic()
-	case bAddress:
-		p.parseAddress()
-	case bOffset:
-		p.parseOffset()
+	case bVariableDef:
+		p.parseVariableDef()
 	case bIf:
 		p.parseIf()
 	case bAssignment:
@@ -182,19 +188,11 @@ func (p *parser) parseStatement() {
 	}
 }
 
-func (p *parser) parseAutomatic() {
+func (p *parser) parseVariableDef() {
 	v := p.parseDeclaration()
-}
-
-func (p *parser) parseAddress() {
-	v := p.parseDeclaration()
-	p.parseExpression()
-}
-
-func (p *parser) parseOffset() {
-	v := p.parseDeclaration()
-	n := p.getWord()      // Parent variable number
-	offset := p.getWord() //  Offset index into parent variable
+	p.cur.local = append(p.cur.local, v)
+	v.base = &p.variable[p.getWord()-1]
+	v.offset = int(p.getWord())
 }
 
 func (p *parser) parseDeclaration() (v *variable) {
@@ -203,7 +201,7 @@ func (p *parser) parseDeclaration() (v *variable) {
 	switch p.next() {
 	case bWord:
 		v.refLength = p.wordLength
-		v.length = uint(p.wordLength)
+		v.length = 1
 	case bByte:
 		v.refLength = 1
 		v.length = 1
@@ -215,10 +213,14 @@ func (p *parser) parseDeclaration() (v *variable) {
 		v.length = p.getWord()
 	case bFunction:
 		v.refLength = p.wordLength
-		v.length = uint(p.wordLength)
+		v.length = 1
 		p.parseFunction(v)
 	}
 	return
+}
+
+func (p *parser) parseFunction(v *variable) {
+
 }
 
 func (p *parser) parseIf() {
@@ -227,8 +229,11 @@ func (p *parser) parseIf() {
 }
 
 func (p *parser) parseAssignment() {
+	s := new(assignmentStmt)
+	p.cur.stmt = append(p.cur.stmt, s)
 	for n := p.getWord(); n > 0; n-- {
 		v := p.getWord()
+		s.assignee = append(s.assignee, &p.variable[v-1])
 	}
 	p.parseExpression()
 }
