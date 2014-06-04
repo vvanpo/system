@@ -196,8 +196,7 @@ func (p *parser) parseVariableDef() statement {
 }
 
 func (p *parser) parseDeclaration() (v *variable) {
-	n := p.getWord() // Variable number
-	v = p.getVariable(n)
+	v = p.getVariable(p.getWord())
 	switch p.next() {
 	case bWord:
 		v.refLength = p.wordLength
@@ -230,13 +229,17 @@ func (p *parser) parseAssignment() statement {
 		v := p.getWord()
 		s.assignee = append(s.assignee, p.getVariable(v))
 	}
-	p.parseExpression()
+	switch p.next() {
+	case bExpression:
+		s.expr = p.parseExpression()
+	case bFunction:
+	}
 	return s
 }
 
 func (p *parser) parseJump() statement {
 	s := new(jumpStmt)
-	p.parseExpression()
+	s.expr = p.parseExpression()
 	return s
 }
 
@@ -244,29 +247,30 @@ func (p *parser) parseReturn() statement {
 	return new(returnStmt)
 }
 
-func (p *parser) parseExpression() {
+func (p *parser) parseExpression() (e expression) {
 	switch p.next() {
 	case bLiteral:
-		p.parseLiteral()
+		e = p.parseLiteral()
 	case bVariableRef:
-		p.parseVariableRef()
+		e = p.parseVariableRef()
 	case bFunctionCall:
-		p.parseFunctionCall()
+		e = p.parseFunctionCall()
 	default:
 		log.Fatal("Invalid expression")
 	}
+	return
 }
 
-func (p *parser) parseLiteral() {
-
+func (p *parser) parseLiteral() expression {
+	return
 }
 
-func (p *parser) parseVariableRef() {
-
+func (p *parser) parseVariableRef() expression {
+	return
 }
 
-func (p *parser) parseFunctionCall() {
-
+func (p *parser) parseFunctionCall() expression {
+	return
 }
 
 func (p *parser) parseFunction(v *variable) {
