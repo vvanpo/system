@@ -58,15 +58,6 @@ func (p *parser) getWord() (word uint) {
 	return
 }
 
-func (p *parser) getVariable(id string) *variable {
-	for _, v := range p.variable {
-		if *v.identifier == identifier(id) {
-			return &v
-		}
-	}
-	return nil
-}
-
 func (p *parser) next() (c byte) {
 	c, err := p.ReadByte()
 	if err != nil {
@@ -191,6 +182,7 @@ func (p *parser) parseStatement() {
 func (p *parser) parseVariableDef() {
 	v := p.parseDeclaration()
 	p.cur.local = append(p.cur.local, v)
+	v.scope = p.cur
 	v.base = &p.variable[p.getWord()-1]
 	v.offset = int(p.getWord())
 }
@@ -220,7 +212,7 @@ func (p *parser) parseDeclaration() (v *variable) {
 }
 
 func (p *parser) parseFunction(v *variable) {
-
+	
 }
 
 func (p *parser) parseIf() {

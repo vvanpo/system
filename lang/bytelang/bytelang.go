@@ -55,7 +55,6 @@ type identifier string
 
 type variable struct {
 	*identifier
-	parent    *variable // Parent namespace
 	scope     *function
 	refLength int       // Reference granularity in bytes, e.g. for bWord refLength = bytelang.wordLength
 	length    uint      // Length in terms of refLength
