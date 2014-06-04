@@ -47,9 +47,10 @@ type identifier string
 
 type variable struct {
 	*identifier
-	parent *variable // Parent namespace
-	scope  *function
-	length int // Length in bytes
+	parent    *variable // Parent namespace
+	scope     *function
+	refLength int  // Reference granularity in bytes, e.g. for bWord refLength = p.wordLen
+	length    uint // Length in bytes, same as refLength if bByte or bWord
 }
 
 type function struct {
@@ -98,4 +99,6 @@ type reference struct {
 
 type functionCall *function
 
-type operation struct{}
+type operation struct {
+	expr []*expression
+}

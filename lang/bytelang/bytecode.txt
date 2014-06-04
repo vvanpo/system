@@ -48,7 +48,7 @@ Bytecode grammar:
 		VariableDef = Automatic | Address | Offset
 			Automatic = bAutomatic, Declaration
 			Address = bAddress, Declaration, Expression
-			Offset = bOffset, variable_number, offset_number, Declaration
+			Offset = bOffset, Declaration, variable_number, offset_number
 			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte | Function )
 				BlockWord = bBlockWord, number
 				BlockByte = bBlockByte, number
@@ -60,7 +60,7 @@ Bytecode grammar:
 			Expression = bExpression, ( Literal | VariableRef | FunctionCall | Operation )
 				Literal = bLiteral, number
 				VariableRef = bVariableRef, number
-				FunctionCall = bFunctionCall, Expression+
+				FunctionCall = bFunctionCall, ( VariableRef | Function ), Expression+
 				Operation = ( bReferenceOp
 							| bDereferenceOp
 							| bAddOp

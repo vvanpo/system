@@ -18,13 +18,14 @@ type parser struct {
 }
 
 func newParser(r io.Reader) (p *parser) {
-	p = new(parser)
-	p.Buffer = new(bytes.Buffer)
 	n, err := p.ReadFrom(r)
 	if err != nil {
 		log.Fatal(err)
 	}
-	p.fileLen = n
+	p = &parser{
+		Buffer:  new(bytes.Buffer),
+		fileLen: n,
+	}
 	return
 }
 
@@ -190,22 +191,42 @@ func (p *parser) parseStatement() {
 }
 
 func (p *parser) parseAutomatic() {
-	p.parseDeclaration()
+	v := p.parseDeclaration()
 }
 
 func (p *parser) parseAddress() {
-	p.parseDeclaration()
+	v := p.parseDeclaration()
 	p.parseExpression()
 }
 
 func (p *parser) parseOffset() {
-	n := p.getWord()
-	offset := p.getWord()
-	p.parseDeclaration()
+	v := p.parseDeclaration()
+	n := p.getWord()      // Parent variable number
+	offset := p.getWord() //  Offset index into parent variable
 }
 
-func (p *parser) parseDeclaration() {
-
+func (p *parser) parseDeclaration() (v *variable) {
+	n := p.getWord() // Variable number
+	v = &p.variable[n-1]
+	switch p.next() {
+	case bWord:
+		v.refLength = p.wordLen
+		v.length = uint(p.wordLen)
+	case bByte:
+		v.refLength = 1
+		v.length = 1
+	case bBlockWord:
+		v.refLength = p.wordLen
+		v.length = p.getWord()
+	case bBlockByte:
+		v.refLength = 1
+		v.length = p.getWord()
+	case bFunction:
+		v.refLength = p.wordLen
+		v.length = uint(p.wordLen)
+		p.parseFunction()
+	}
+	return
 }
 
 func (p *parser) parseIf() {
