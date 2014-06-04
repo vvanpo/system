@@ -12,14 +12,9 @@ type parser struct {
 	fileLen    int64
 	wordLen    int // Bytes per word
 	identifier []identifier
-	symbol     []symbol
-	imported   []*symbol
+	variable   []variable
+	imported   []*variable // Index into variable list
 	literal    []literal
-	tree       struct { // Syntax tree
-		root         *object
-		cur          *object
-		curNamespace *symbol
-	}
 }
 
 func newParser(r io.Reader) (p *parser) {
@@ -48,13 +43,11 @@ func (p *parser) addIdentifier(id string) {
 	p.identifier = append(p.identifier, identifier(id))
 }
 
-func (p *parser) addSymbol(idNumber int, address uint) {
-	s := symbol{
-		&p.identifier[idNumber-1],
-		address,
-		nil,
+func (p *parser) addVariable(idNumber int) {
+	s := variable{
+		identifier: &p.identifier[idNumber-1],
 	}
-	p.symbol = append(p.symbol, s)
+	p.variable = append(p.variable, s)
 }
 
 func (p *parser) getWord() (word uint) {
@@ -79,7 +72,7 @@ func (p *parser) next() (c byte) {
 func (p *parser) parseFile() {
 	p.parseHeader()
 	p.parseIdentifierList()
-	p.parseSymbolTable()
+	p.parseVariableTable()
 	p.parseImportTable()
 	p.parseStartBytecode()
 	p.parseLiteralList()
@@ -131,34 +124,27 @@ func (p *parser) parseIdentifierList() {
 	}
 }
 
-func (p *parser) parseSymbolTable() {
+func (p *parser) parseVariableTable() {
 	n := p.getWord()
 	for i := range p.identifier {
-		p.addSymbol(i+1, 0)
+		p.addVariable(i + 1)
 		n--
 	}
 	for ; n > 0; n-- {
 		id := p.getWord()
-		address := p.getWord()
-		p.addSymbol(int(id), address)
+		p.addVariable(int(id))
 	}
 }
 
 func (p *parser) parseImportTable() {
 	for n := p.getWord(); n > 0; n-- {
-		symbol := p.getWord()
-		p.imported = append(p.imported, &p.symbol[symbol-1])
+		variable := p.getWord()
+		p.imported = append(p.imported, &p.variable[variable-1])
 	}
 }
 
 func (p *parser) parseStartBytecode() {
-	n := p.getWord()
-	if n == 0 {
-		log.Fatal("Missing definition statement")
-	}
-	for ; n > 0; n-- {
-		p.parseSymbolDef()
-	}
+	p.parseStatementList()
 }
 
 func (p *parser) parseLiteralList() {
@@ -172,13 +158,17 @@ func (p *parser) parseLiteralList() {
 	}
 }
 
-func (p *parser) parseSymbolDef() {
-	if p.next() != bSymbolDef {
-		log.Fatal("Invalid definition statement")
-	}
+func (p *parser) parseStatementList() {
 	n := p.getWord()
-	p.symbol[n-1].parent = p.tree.curNamespace
-	p.tree.curNamespace = &p.symbol[n-1]
+	if n == 0 {
+		log.Fatal("Missing statement")
+	}
+	for ; n > 0; n-- {
+		p.parseStatement()
+	}
+}
+
+func (p *parser) parseStatement() {
 	switch p.next() {
 	case bAutomatic:
 		p.parseAutomatic()
@@ -186,19 +176,62 @@ func (p *parser) parseSymbolDef() {
 		p.parseAddress()
 	case bOffset:
 		p.parseOffset()
+	case bIf:
+		p.parseIf()
+	case bAssignment:
+		p.parseAssignment()
+	case bJump:
+		p.parseJump()
+	case bReturn:
+		p.parseReturn()
 	default:
-		log.Fatal("Invalid definition statement")
+		log.Fatal("Invalid statement")
 	}
 }
 
 func (p *parser) parseAutomatic() {
-
+	p.parseDeclaration()
 }
 
 func (p *parser) parseAddress() {
-
+	p.parseDeclaration()
+	p.parseExpression()
 }
 
 func (p *parser) parseOffset() {
+	n := p.getWord()
+	offset := p.getWord()
+	p.parseDeclaration()
+}
 
+func (p *parser) parseIf() {
+	p.parseExpression()
+	p.parseStatementList()
+}
+
+func (p *parser) parseAssignment() {
+	for n := p.getWord(); n > 0; n-- {
+		v := p.getWord()
+	}
+	p.parseExpression()
+}
+
+func (p *parser) parseJump() {
+	p.parseExpression()
+}
+
+func (p *parser) parseReturn() {
+}
+
+func (p *parser) parseExpression() {
+	switch p.next() {
+	case bLiteral:
+		p.parseLiteral()
+	case bVariableRef:
+		p.parseVariableRef()
+	case bFunctionCall:
+		p.parseFunctionCall()
+	default:
+		log.Fatal("Invalid expression")
+	}
 }

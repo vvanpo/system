@@ -1,8 +1,7 @@
 package main
 
 const (
-	bError     byte = iota
-	bSymbolDef      // Namespace decided by nesting within bFunction declarations or bBlock* structures
+	bError byte = iota
 	bWord
 	bByte
 	bBlockWord
@@ -17,10 +16,9 @@ const (
 	bReturn
 	bExpression
 	bLiteral
-	bSymbolRef
-	bFunctionCall // First expression must be a symbol or address
-	bOperation
-	bReferenceOp   // Address reference for a given symbol
+	bVariableRef   // Value reference
+	bFunctionCall  // First expression must be a variable or address
+	bReferenceOp   // Address reference for a given variable
 	bDereferenceOp // Pointer dereference
 	bAddOp
 	bSubtractOp
@@ -47,34 +45,28 @@ const specialIdentifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
 
 type identifier string
 
-// Syntax object (function, statement, expression, etc.)
-type object interface {
-	action()
-	up() *object // Return parent object
-}
-
-type symbol struct {
-	*identifier
-	address uint    // Address is an offset to the base namespace address, as pointed to by symbol.parent (0 if parent = nil)
-	parent  *symbol // Parent namespace
-}
-
 type variable struct {
-	*symbol
+	*identifier
+	parent *variable // Parent namespace
 	scope  *function
 	length int // Length in bytes
 }
 
 type function struct {
-	name  *variable   // Binding variable (optional)
+	bind  *variable   // Binding variable
 	param []*variable // Parameters
 	ret   []*variable // Return variables
-	stmt  []*object   // Statement list
+	local []*variable // Local variables
+	stmt	[]statement	// Statement list
+}
+
+type statement interface {
+	action()
 }
 
 type ifStmt struct {
-	expr []*expression
-	stmt []*object
+	expr []*expression	// Condition
+	stmt []statement	// Statement body
 }
 
 type assignmentStmt struct {

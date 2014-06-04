@@ -1,6 +1,6 @@
 
 1-to-1 mapping of bytecode <-> language syntax/semantics:
-	- bytecode hence includes symbol table
+	- bytecode hence includes variable table
 	- Build a bytecode translator to C and/or ELF/SysV
 	- Build a virtual machine for ELF/SysV?
 
@@ -26,63 +26,64 @@ Bytecode compiler:
 	  allows the programmer to keep the illusion that he/she has complete control
 	  the entire 64-bit region.
 
-Symbol namespaces:
+Variable namespaces:
 	- Taken from Golang:
-		- a bBlock* structure can have symbols offset into itself, just like C structs
-		- if bBlock* "sym1" has bBlock* "sym2" nested within it, and "sym2" has "sym3" as a nested symbol, then if "sym3" is unique to both "sym2" and "sym1" it can be referenced directly from "sym1": "sym1.sym3"
-	- All symbols, external or not, are stored in symbol table
+		- a bBlock* structure can have variables offset into itself, just like C structs
+		- if bBlock* "sym1" has bBlock* "sym2" nested within it, and "sym2" has "sym3" as a nested variable, then if "sym3" is unique to both "sym2" and "sym1" it can be referenced directly from "sym1": "sym1.sym3"
+	- All variables, external or not, are stored in variable table
 
 Bytecode grammar:
 
-	file = header, identifier_list, symbol_table, import_table, start_bytecode, literal_list
+	file = header, identifier_list, variable_table, import_table, start_bytecode, literal_list
 
 	header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
 		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"
 	identifier_list = number, special_identifiers, ( identifier, "\n" )*
-	symbol_table = number, special_symbols, ( identifier_number, address )*
-	import_table = number, ( symbol_number )*
-	start_bytecode = number, ( SymbolDef )+
+	variable_table = number, special_variables, ( identifier_number )*
+	import_table = number, ( variable_number )*
+	start_bytecode = number, Statement+
 	literal_list = ( number, number+ )*
 
-	SymbolDef = bSymbolDef, symbol_number, ( Automatic | Address | Offset )
-		Automatic = bAutomatic, Declaration
-		Address = bAddress, Declaration, Expression
-		Offset = bOffset, ( ( Automatic, number ) | Address | Offset ), number, Declaration
-		Declaration = ( bWord | bByte | BlockWord | BlockByte | Function )
-			BlockWord = bBlockWord, number
-			BlockByte = bBlockByte, number
-			Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval> ( bWord | bByte | BlockWord | Blockyte )* number Statement+
-				Statement = If | Assignment | Jump | Return
-					If = Expression, number, Statement+
-					Assignment = number, Expression+
-					Jump = bJump, Expression
-					Return = bReturn
-		Expression = bExpression, ( Literal | SymbolRef | FunctionCall | Operation )
-			Literal = bLiteral, number
-			SymbolRef = bSymbolRef, number
-			FunctionCall = bFunctionCall, Expression+
-			Operation = bOperation, ( bReferenceOp
-									| bDereferenceOp
-									| bAddOp
-									| bSubtractOp
-									| bMultiplyOp
-									| bDivideOp
-									| bExponentOp
-									| bModuloOp
-									| bAndOp
-									| bOrOp
-									| bXorOp
-									| bNotOp
-									| bRotateLeftOp
-									| bRotateRightOp ), Expression+
+	Statement = VariableDef | If | Assignment | Jump | Return
+		VariableDef = Automatic | Address | Offset
+			Automatic = bAutomatic, Declaration
+			Address = bAddress, Declaration, Expression
+			Offset = bOffset, variable_number, offset_number, Declaration
+			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte | Function )
+				BlockWord = bBlockWord, number
+				BlockByte = bBlockByte, number
+				Function = bFunction, number_params, ( bWord | bByte | BlockWord | BlockByte )* number_retval ( bWord | bByte | BlockWord | Blockyte )* number Statement+
+		If = bIf, Expression, number, Statement+
+		Assignment = bAssignment, number, variable_number+, Expression
+		Jump = bJump, Expression
+		Return = bReturn
+			Expression = bExpression, ( Literal | VariableRef | FunctionCall | Operation )
+				Literal = bLiteral, number
+				VariableRef = bVariableRef, number
+				FunctionCall = bFunctionCall, Expression+
+				Operation = ( bReferenceOp
+							| bDereferenceOp
+							| bAddOp
+							| bSubtractOp
+							| bMultiplyOp
+							| bDivideOp
+							| bExponentOp
+							| bModuloOp
+							| bAndOp
+							| bOrOp
+							| bXorOp
+							| bNotOp
+							| bRotateLeftOp
+							| bRotateRightOp ), Expression+
 
 	identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
 	identifier_number = number
-	symbol_number = number
+	variable_number = number
+	offset_number = number
 	address = number
 	number = WORD
 	number_params = BYTE
 	number_retval = BYTE
 
 	special_identifiers = "_\n_sp\n_fp\n_ip\n_text\n_data\n"
-	special_symbols = 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0	// Each value 1 word in width
+	special_variables = 1, 2, 3, 4, 5, 6 // Each value 1 word in width
