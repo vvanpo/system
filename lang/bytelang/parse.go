@@ -204,6 +204,10 @@ func (p *parser) parseOffset() {
 	p.parseDeclaration()
 }
 
+func (p *parser) parseDeclaration() {
+
+}
+
 func (p *parser) parseIf() {
 	p.parseExpression()
 	p.parseStatementList()
@@ -234,4 +238,16 @@ func (p *parser) parseExpression() {
 	default:
 		log.Fatal("Invalid expression")
 	}
+}
+
+func (p *parser) parseLiteral() {
+
+}
+
+func (p *parser) parseVariableRef() {
+
+}
+
+func (p *parser) parseFunctionCall() {
+
 }

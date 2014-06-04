@@ -57,7 +57,7 @@ type function struct {
 	param []*variable // Parameters
 	ret   []*variable // Return variables
 	local []*variable // Local variables
-	stmt	[]statement	// Statement list
+	stmt  []statement // Statement list
 }
 
 type statement interface {
@@ -65,8 +65,8 @@ type statement interface {
 }
 
 type ifStmt struct {
-	expr []*expression	// Condition
-	stmt []statement	// Statement body
+	expr []*expression // Condition
+	stmt []statement   // Statement body
 }
 
 type assignmentStmt struct {
@@ -94,9 +94,6 @@ func (l literal) evaluate() []byte {
 
 type reference struct {
 	*variable
-}
-
-func (r *reference) evaluate() []byte {
 }
 
 type functionCall *function
