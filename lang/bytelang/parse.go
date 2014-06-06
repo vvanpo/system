@@ -1,14 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"log"
+	"strings"
 	"unicode"
 )
 
 type parser struct {
-	*bytes.Buffer
+	*strings.Reader
 	bytelang
 	cur *function // Function scope tracking during parsing
 }

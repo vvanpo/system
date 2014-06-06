@@ -1,6 +1,6 @@
 
 1-to-1 mapping of bytecode <-> language syntax/semantics:
-	- bytecode hence includes variable table
+	- bytecode hence includes complete variable list
 	- Build a bytecode translator to C and/or ELF/SysV
 	- Build a virtual machine for ELF/SysV?
 
@@ -17,8 +17,8 @@ Bytecode compiler:
 	- No such thing as compiler flags, only pragmas.  All compiler options must
 	  be specified within the code (e.g. turning off certain warnings), this
 	  ensures verifiable builds.  A consequence is that all compiler
-	  optimizations must be well-defined and baked into the source code of every
-	  program that wants to use them.
+	  optimizations must be well-defined and baked-in to the source code of
+	  every program that wants to use them.
 	- If we ever pass the 2^8 code limit, a simple method of increasing the
 	  range is to map each to code to a rune---a "runecode" rather than a
 	  "bytecode"---and encode in UTF-8
@@ -63,11 +63,11 @@ Bytecode compiler:
 	  heap".  This last address is the first literal in the literal list, so
 	  that any statement can make use of it.
 
-Namespaces hierarchy:
+Namespace hierarchy:
 	- Taken from Golang:
-		- a bBlock* structure can have variables offset into itself, just like C
+		- a bBlock structure can have variables offset into itself, just like C
 		  structs
-		- if bBlock* "sym1" has bBlock* "sym2" nested within it, and "sym2" has
+		- if bBlock "sym1" has bBlock "sym2" nested within it, and "sym2" has
 		  "sym3" as a nested variable, then if "sym3" is unique to both "sym2"
 		  and "sym1" it can be referenced directly from "sym1": "sym1.sym3"
 
@@ -101,7 +101,7 @@ Bytecode grammar:
 							member_variable = byte_offset, variable
 				number_return = WORD
 				number_statements = WORD
-				statement = ( bVariable, variable ) | function_call | if | assignment | jump | return
+				statement = ( bVariable, variable ) | function_call | if | assignment | return
 					function_call = bFunctionCall, reference, argument*, return_assignment*
 						reference = namespace_index
 						argument = expression
@@ -117,7 +117,7 @@ Bytecode grammar:
 										binary_operator = bAddOp
 															| bSubtractOp
 															| bMultiplyOp
-															| bDivideOp
+															| bDivideFloorOp
 															| bExponentOp
 															| bModuloOp
 															| bAndOp
@@ -129,9 +129,7 @@ Bytecode grammar:
 					if = bIf, expression, number_statements, statement+
 					assignment = bAssignment, receiver, expression
 						receiver = reference
-					jump = bJump, expression
 					return = bReturn
-
 
 Stack frame diagram:
 
