@@ -64,9 +64,9 @@ type literal interface {
 }
 
 type function struct {
-	parameter	[]variable
-	returnVal	[]variable
-	statement	[]statement
+	parameter []variable
+	returnVal []variable
+	statement []literal
 }
 
 func (f *function) value() string {
@@ -80,87 +80,6 @@ func (b bytes) value() string {
 }
 
 type variable struct {
-	length    uint      // Length in bytes
+	length uint // Length in bytes
 }
 
-type statement interface {
-	
-}
-
-type expression interface {
-
-}
-
-/*
-type variable struct {
-	*identifier
-	scope     *function
-	base      *variable // Base address
-	// Automatic variables will use _fp
-	// Address aliases (heap variables) will use _data
-	// Function aliases will use _text
-	offset int // Address offset from base
-}
-
-type function struct {
-	bind  *variable   // Binding variable
-	param []*variable // Parameters
-	local []*variable // Local variables
-	stmt  []statement // Statement list
-}
-
-type statement interface {
-	action()
-}
-
-type variableDefStmt struct{}
-
-func (v *variableDefStmt) action() {
-}
-
-type ifStmt struct {
-	expr []expression // Condition
-	stmt []statement  // Statement body
-}
-
-func (i *ifStmt) action() {
-}
-
-type assignmentStmt struct {
-	assignee []*variable
-	expr     expression
-}
-
-func (a *assignmentStmt) action() {
-}
-
-type jumpStmt struct {
-	expr expression
-}
-
-func (j *jumpStmt) action() {
-}
-
-type returnStmt struct{}
-
-func (r *returnStmt) action() {
-}
-
-type expression interface {
-	evaluate() []byte
-}
-
-func (l literal) evaluate() []byte {
-	return l
-}
-
-type reference struct {
-	*variable
-}
-
-type functionCall *function
-
-type operation struct {
-	expr []*expression
-}
-*/

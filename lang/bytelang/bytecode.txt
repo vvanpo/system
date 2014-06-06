@@ -3,6 +3,12 @@
 	- bytecode hence includes complete variable list
 	- Build a bytecode translator to C and/or ELF/SysV
 	- Build a virtual machine for ELF/SysV?
+	- Literate programming: embedded documentation/specification that defines
+	  aspects of each function, and restricts/adds checks for how certain
+	  objects can be used.
+	- Preprocessor: more than just macros---the prepocessor adds most of the
+	  safety checks and syntax.  Essentially a scripting language that defines
+	  how the program gets compiled.
 
 Bytecode compiler:
 	- Warnings default to compilation error, must be turned off individually to
