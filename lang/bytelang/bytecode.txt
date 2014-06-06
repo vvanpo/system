@@ -14,6 +14,11 @@ Bytecode compiler:
 			- non-deterministic pointer values, say from stream input, can
 			  result in these warnings if there are no alignment checks
 			  (depending on the operation(s))
+	- No such thing as compiler flags, only pragmas.  All compiler options must
+	  be specified within the code (e.g. turning off certain warnings), this
+	  ensures verifiable builds.  A consequence is that all compiler
+	  optimizations must be well-defined and baked into the source code of every
+	  program that wants to use them.
 	- If we ever pass the 2^8 code limit, a simple method of increasing the
 	  range is to map each to code to a rune---a "runecode" rather than a
 	  "bytecode"---and encode in UTF-8
@@ -49,9 +54,6 @@ Bytecode compiler:
 	  (drivers, kernel code, etc.) needs to access a special memory location.
 	- Code is data.  Pre-defined functions are literals, just as any other pre-
 	  defined data is.
-	- Each function is its own literal.  Each variable is also its own literal,
-	  and points to the literal representings its initial value.  A named
-	  function therefore consists of a variable pointing to a function literal.
 	- No formal segments are used to partition up the (fictional) address
 	  space of the bytecode file.  Programmers are free to define their own
 	  segments, and must set up their own stack by assigning a value to _sp
@@ -61,7 +63,7 @@ Bytecode compiler:
 	  heap".  This last address is the first literal in the literal list, so
 	  that any statement can make use of it.
 
-Variable namespaces:
+Namespaces hierarchy:
 	- Taken from Golang:
 		- a bBlock* structure can have variables offset into itself, just like C
 		  structs
@@ -71,72 +73,70 @@ Variable namespaces:
 
 Bytecode grammar:
 
-	bytelang = header, identifier_list, literal_list
+	bytelang = header, identifier_list, namespace_tree, literal_list
 	header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
 		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"		# determines the length of WORD
 	identifier_list = number_identifiers, special_identifiers, ( identifier, "\n" )*
 		number_identifiers = WORD
 		special_identifiers = "_\n_sp\n_fp\n_ip\n"
 		identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
-	literal_list = heap_address, start_function, ( literal )+
+	namespace_tree = namespace					# the root namespace defines the start function and the module name
+		namespace = id_number, identifier_index, number_members, member*
+			id_number = WORD					# id_number uniquely identifies a variable, but multiple namespace patterns can resolve to the same id_number (for members of block variables)
+			identifier_index = WORD
+			number_members = WORD
+			member = namespace
+	literal_list = heap_address, ( literal )+
 		heap_address = bytes					# length of a word, as it is an address.  Represents start of the heap, i.e. 1 + bytelang file-length in bytes
-		start_function = function				# start function: _ip is initialized to the corresponding address.  Return statement exits program.
-		literal = variable | function | bytes
-			variable = bVariable, identifier_index, owner_index, declaration
-				identifier_index = WORD
-				owner_index = WORD				# owning function, to determine scope
-				declaration = 
-			function = 
-				statement = variable_def | if | assignment | jump | return
-				expression = bExpression, ( bytes | variable_ref | function_call | operation )
-					call = 
-					operation = 
-			bytes = bBytes, number_bytes, BYTE+		# big-endian order
-				number_bytes = WORD
+			bytes = bBytes, number_bytes, BYTE+	# big-endian order
+		literal = function | bytes
+			function = bFunction, number_params, variable*, number_return, variable*, number_statements, statement+
+				number_params = WORD
+				variable = namespace_index, type
+					namespace_index = WORD		# references id_number in namespace_tree
+					type = bByte | bWord | block
+						block = bBlock, number_bytes, number_members, member_variable*
+							number_bytes = WORD
+							number_members = WORD
+							member_variable = byte_offset, variable
+				number_return = WORD
+				number_statements = WORD
+				statement = ( bVariable, variable ) | function_call | if | assignment | jump | return
+					function_call = bFunctionCall, reference, argument*, return_assignment*
+						reference = namespace_index
+						argument = expression
+							expression = literal_pointer | literal_value | ( bReference, reference ) | function | operation
+								literal_pointer = bLiteralPointer, literal_index
+									literal_index = WORD
+								literal_value = bLiteralValue, literal_index
+								operation = unary_operation | binary_operation
+									unary_operation = address_reference | ( unary_operator, expression )
+										address_reference = bAddressReferenceOp, reference
+										unary_operator = bDereferenceOp | bNotOp
+									binary_operation = binary_operator, expression, expression
+										binary_operator = bAddOp
+															| bSubtractOp
+															| bMultiplyOp
+															| bDivideOp
+															| bExponentOp
+															| bModuloOp
+															| bAndOp
+															| bOrOp
+															| bXorOp
+															| bRotateLeftOp
+															| bRotateRightOp
+						return_assignment = reference
+					if = bIf, expression, number_statements, statement+
+					assignment = bAssignment, receiver, expression
+						receiver = reference
+					jump = bJump, expression
+					return = bReturn
 
-#	file = header, identifier_list, variable_table, import_table, statement_list, literal_list
-#
-#	header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
-#		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"
-#	identifier_list = number, special_identifiers, ( identifier, "\n" )*
-#	variable_table = number, special_variables, ( identifier_number )*
-#	import_table = number, ( variable_number )*
-#	statement_list = number, Statement+
-#	literal_list = ( number, number+ )*
-#
-#	Statement = VariableDef | If | Assignment | Jump | Return
-#		VariableDef = bVariableDef, Declaration, variable_number, number
-#			Declaration = variable_number, ( bWord | bByte | BlockWord | BlockByte )
-#				BlockWord = bBlockWord, number
-#				BlockByte = bBlockByte, number
-#		If = bIf, Expression, statement_list
-#		Assignment = bAssignment, number, variable_number+, ( Expression | Function)
-#		Jump = bJump, Expression
-#		Return = bReturn
-#			Function = bFunction, number_params, VariableDef*, number_retval, ( bWord | bByte | BlockWord | Blockyte )*, statement_list
-#			Expression = bExpression, ( Literal | VariableRef | FunctionCall | Operation )
-#				Literal = bLiteral, number
-#				VariableRef = bVariableRef, variable_number
-#				FunctionCall = bFunctionCall, ( VariableRef | Function ), Expression+
-#				Operation = ( bReferenceOp
-#							| bDereferenceOp
-#							| bAddOp
-#							| bSubtractOp
-#							| bMultiplyOp
-#							| bDivideOp
-#							| bExponentOp
-#							| bModuloOp
-#							| bAndOp
-#							| bOrOp
-#							| bXorOp
-#							| bNotOp
-#							| bRotateLeftOp
-#							| bRotateRightOp ), Expression+
 
 Stack frame diagram:
 
 	caller_local    |
-	-----           |	grows down?
+	-----           |	grows down
 	args            |
 	fp              v
 	ret
