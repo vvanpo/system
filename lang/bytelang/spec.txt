@@ -93,49 +93,49 @@ Bytecode grammar:
 			number_members = WORD
 			member = namespace
 	literal_list = heap_address, ( literal )+
-		heap_address = bytes					# length of a word, as it is an address.  Represents start of the heap, i.e. 1 + bytelang file-length in bytes
-			bytes = bBytes, number_bytes, BYTE+	# big-endian order
-		literal = function | bytes
-			function = bFunction, number_params, variable*, number_return, variable*, number_statements, statement+
-				number_params = WORD
+		heap_address = literal_value			# length of a word, as it is an address.  Represents start of the heap, i.e. 1 + bytelang file-length in bytes
+		literal = statement | expression
+			statement = ( bVariable, variable ) | function_call | if | assignment | return
 				variable = namespace_index, type
 					namespace_index = WORD		# references id_number in namespace_tree
 					type = bByte | bWord | block
 						block = bBlock, number_bytes, number_members, member_variable*
 							number_bytes = WORD
 							number_members = WORD
-							member_variable = byte_offset, variable
-				number_return = WORD
-				number_statements = WORD
-				statement = ( bVariable, variable ) | function_call | if | assignment | return
-					function_call = bFunctionCall, reference, argument*, return_assignment*
-						reference = namespace_index
-						argument = expression
-							expression = literal_pointer | literal_value | ( bReference, reference ) | function | operation
-								literal_pointer = bLiteralPointer, literal_index
-									literal_index = WORD
-								literal_value = bLiteralValue, literal_index
-								operation = unary_operation | binary_operation
-									unary_operation = address_reference | ( unary_operator, expression )
-										address_reference = bAddressReferenceOp, reference
-										unary_operator = bDereferenceOp | bNotOp
-									binary_operation = binary_operator, expression, expression
-										binary_operator = bAddOp
-															| bSubtractOp
-															| bMultiplyOp
-															| bDivideFloorOp
-															| bExponentOp
-															| bModuloOp
-															| bAndOp
-															| bOrOp
-															| bXorOp
-															| bRotateLeftOp
-															| bRotateRightOp
-						return_assignment = reference
-					if = bIf, expression, number_statements, statement+
-					assignment = bAssignment, receiver, expression
-						receiver = reference
-					return = bReturn
+							member_variable = byte_offset, literal_index
+								byte_offset = WORD
+				function_call = bFunctionCall, callee, argument*, return_assignment*
+					callee = expression			# usually a reference, or a pre-defined function
+					argument = expression
+					return_assignment = reference
+				if = bIf, expression, number_statements, statement+
+				assignment = bAssignment, receiver, expression
+					receiver = reference
+				return = bReturn
+			expression = literal_pointer, literal_value, ( bReference, reference ), function, unary_operation, binary_operation
+				literal_pointer = bLiteralPointer, literal_index
+					literal_index = WORD
+				literal_value = bLiteralValue, number_bytes, BYTE+	# big-endian order
+				reference = namespace_index
+				function = bFunction, number_params, variable*, number_return, variable*, number_statements, statement+
+					number_params = WORD
+					number_return = WORD
+					number_statements = WORD
+				unary_operation = address_reference | ( unary_operator, expression )
+					address_reference = bAddressReferenceOp, reference
+					unary_operator = bDereferenceOp | bNotOp
+				binary_operation = binary_operator, expression, expression
+					binary_operator = bAddOp
+										| bSubtractOp
+										| bMultiplyOp
+										| bDivideFloorOp
+										| bExponentOp
+										| bModuloOp
+										| bAndOp
+										| bOrOp
+										| bXorOp
+										| bRotateLeftOp
+										| bRotateRightOp
 
 Stack frame diagram:
 
