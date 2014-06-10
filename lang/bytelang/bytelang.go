@@ -50,8 +50,7 @@ const specialIdentifiers = "_\n_sp\n_fp\n_ip\n"
 type bytelang struct {
 	wordLength int          // Bytes per word
 	identifier []identifier // Identifier list
-	namespace               // Namespace tree
-	statement  []statement  // List of literals
+	statement  []statement  // List of statements
 }
 
 func (b *bytelang) putWord(w uint) string {
@@ -61,6 +60,15 @@ func (b *bytelang) putWord(w uint) string {
 		w >>= 8
 	}
 	return string(s)
+}
+
+func (b *bytelang) identifierIndex(i *identifier) uint {
+	for j := range b.identifier {
+		if &b.identifier[j] == i {
+			return uint(j + 1)
+		}
+	}
+	return 0
 }
 
 func (b *bytelang) statementIndex(l statement) uint {
@@ -74,15 +82,8 @@ func (b *bytelang) statementIndex(l statement) uint {
 
 type identifier string
 
-type namespace struct {
-	*variable   // Reverse index into statement list
-	*identifier // Index into identifier list
-	member      []*namespace
-	parent      *namespace
-}
-
 type bytecode interface {
-	bytecode() (marker byte, bytecode string) // All bytecode representations start with a bytecode marker (see above const list)
+	bytecode() string // All bytecode representations start with a bytecode marker (see above const list)
 }
 
 type statement interface {
@@ -91,25 +92,43 @@ type statement interface {
 
 type variable struct {
 	*bytelang
-	typ   byte // bByte, bWord, or bBlock
-	block struct {
-		length uint // Length in bytes
-		member []struct {
-			offset uint
-			*namespace
-		}
+	*identifier
+}
+
+type variableWord variable
+
+func (v *variableWord) bytecode() (b string) {
+	b = string(bVariable)
+	b += v.putWord(v.identifierIndex(v.identifier))
+	b += string(bWord)
+	return
+}
+
+type variableByte variable
+
+func (v *variableByte) bytecode() (b string) {
+	b = string(bVariable)
+	b += v.putWord(v.identifierIndex(v.identifier))
+	b += string(bByte)
+	return
+}
+
+type variableBlock struct {
+	variable
+	length uint // Length in bytes
+	member []struct {
+		offset uint
+		v      statement
 	}
 }
 
-func (v *variable) bytecode() (marker byte, bytecode string) {
-	marker = bVariable
-	bytecode = string(v.typ)
-	if v.typ == bBlock {
-		bytecode += v.putWord(v.block.length) + v.putWord(uint(len(v.member)))
-		for _, m := range v.block.member {
-			bytecode += v.putWord(m.offset)
-			bytecode += v.putWord(v.statementIndex(m.variable))
-		}
+func (v *variableBlock) bytecode() (b string) {
+	b = string(bVariable)
+	b += v.putWord(v.identifierIndex(v.identifier))
+	b += string(bBlock)
+	b += v.putWord(v.length) + v.putWord(uint(len(v.member)))
+	for _, m := range v.member {
+		b += v.putWord(m.offset) + v.putWord(v.statementIndex(m.v))
 	}
 	return
 }
@@ -118,18 +137,18 @@ type functionCall struct {
 	*bytelang
 	callee   expression
 	argument []expression
-	receiver []*namespace
+	receiver []statement
 }
 
-func (f *functionCall) bytecode() (marker byte, bytecode string) {
-	marker = bFunctionCall
-	bytecode = f.callee.bytecode()
+func (f *functionCall) bytecode() (b string) {
+	b = string(bFunctionCall) + f.callee.bytecode()
 	for _, a := range f.argument {
-		bytecode += a.bytecode()
+		b += a.bytecode()
 	}
 	for _, r := range f.receiver {
-		bytecode += f.putWord(f.namespaceIndex(r))
+		b += f.putWord(f.statementIndex(r))
 	}
+	return
 }
 
 type expression interface {
@@ -137,8 +156,12 @@ type expression interface {
 	value() []byte
 }
 
+type reference struct {
+	statement
+}
+
 type function struct {
-	parameter []*namespace
-	returnVal []*namespace
-	statement []*statement
+	parameter []statement
+	returnVal []statement
+	statement []statement
 }

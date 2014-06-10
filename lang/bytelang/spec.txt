@@ -79,28 +79,24 @@ Namespace hierarchy:
 
 Bytecode grammar:
 
-	bytelang = header, identifier_list, namespace_tree, statement_list
+	bytelang = header, identifier_list, statement_list
 	header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
 		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"		# determines the length of WORD
 	identifier_list = number_identifiers, special_identifiers, ( identifier, "\n" )*
 		number_identifiers = WORD
 		special_identifiers = "_\n_sp\n_fp\n_ip\n"
 		identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
-	namespace_tree = namespace					# the root namespace defines the start function and the module name
-		namespace = id_number, identifier_index, number_members, member*
-			id_number = WORD					# id_number uniquely identifies a variable, but multiple namespace patterns can resolve to the same id_number (for members of block variables)
-			identifier_index = WORD
-			number_members = WORD
-			member = namespace
-	statement_list = heap_address, ( statement )+
-		heap_address = assignment		# length of a word, as it is an address.  Represents start of the heap, i.e. 1 + bytelang file-length in bytes
+	statement_list = number_statements, heap_address, ( statement )+
+		number_statements = WORD
+		heap_address = assignment		# type bWord, as it is an address.  Represents start of the heap, i.e. 1 + bytelang file-length in bytes
 		statement = ( bVariable, variable )
 					| ( bFunctionCall, function_call )
 					| ( bIf, if )
 					| ( bAssignment, assignment )
 					| bReturn
-			variable = reference, type
-				type = bByte | bWord | block
+			variable = identifier_index, type
+				identifier_index = WORD
+				type = bWord | bByte | block
 					block = bBlock, number_bytes, number_members, member_variable*
 						number_bytes = WORD
 						number_members = WORD
@@ -120,12 +116,10 @@ Bytecode grammar:
 					| unary_operation
 					| binary_operation
 			literal = number_bytes, BYTE+	# big-endian order
-			reference = namespace_index
-				namespace_index = WORD		# references id_number in namespace_tree
+			reference = statement_index
 			function = number_params, reference*, number_return, reference*, number_statements, statement_index+
 				number_params = WORD
 				number_return = WORD
-				number_statements = WORD
 			unary_operation = address_reference | ( unary_operator, expression )
 				address_reference = bAddressReferenceOp, reference
 				unary_operator = bDereferenceOp | bNotOp

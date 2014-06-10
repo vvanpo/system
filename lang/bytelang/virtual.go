@@ -10,7 +10,6 @@ type virtual struct {
 
 // New virtual machine
 func newVirtual(r io.Reader) (vm *virtual) {
-	vm = new(virtual)
 	vm.parser = newParser(r)
 	return
 }
