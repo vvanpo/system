@@ -5,9 +5,9 @@ const (
 	bError byte = iota
 	bByte       // Byte-wide variable type
 	bWord       // Word-wide variable type
-	bBlock      // Compile-time-defined-length variabl type
+	bBlock      // Compile-time-defined-length variable type
 	// Statements:
-	bVariable     // Variable declaration
+	bVariable     // Variable allocation
 	bFunctionCall // Function call statement
 	bIf           // If statement
 	bAssignment   // Assignment statement

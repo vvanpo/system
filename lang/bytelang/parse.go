@@ -160,12 +160,12 @@ func (p *parser) parseVariable() {
 		v.bytelang = &p.bytelang
 		v.identifier = &p.identifier[i-1]
 		n := p.parseWord()
-		for i := 0; i < n; i++ {
-			m := struct { offset uint }{ p.parseWord() }
+		for i := 0; i < int(n); i++ {
+			m := struct{ offset uint }{p.parseWord()}
 			v.member = append(v.member, m)
 		}
 		p.addStatement(v)
-		for i := 0; i < n; i++ {
+		for i := 0; i < int(n); i++ {
 			p.parseVariable()
 		}
 	default:
@@ -176,13 +176,13 @@ func (p *parser) parseVariable() {
 func (p *parser) parseFunctionCall() {
 	f := &functionCall{
 		bytelang: &p.bytelang,
-		callee: p.parseExpression(),
+		callee:   p.parseExpression(),
 	}
 	for n := p.parseWord(); n > 0; n-- {
 		f.argument = append(f.argument, p.parseExpression())
 	}
 	for n := p.parseWord(); n > 0; n-- {
-		r := p.putWord(p.statementIndex(p.parseWord()))
+		r := p.statement[p.parseWord()-1]
 		f.receiver = append(f.receiver, r)
 	}
 	p.addStatement(f)
@@ -190,20 +190,20 @@ func (p *parser) parseFunctionCall() {
 
 func (p *parser) parseIf() {
 	i := &ifStmt{
-		bytelang: &p.bytelang,
+		bytelang:  &p.bytelang,
 		condition: p.parseExpression(),
 	}
 	p.addStatement(i)
 	for n := p.parseWord(); n > 0; n-- {
 		p.parseStatement()
-		i.statement = append(i.statement, p.statement[len(p.statement) - 1])
+		i.statement = append(i.statement, p.statement[len(p.statement)-1])
 	}
 }
 
 func (p *parser) parseAssignment() {
-	r := p.putWord(p.statementIndex(p.parseWord()))
+	r := p.statement[p.parseWord()-1]
 	a := &assignment{
-		receiver: r,
+		receiver:   r,
 		expression: p.parseExpression(),
 	}
 	p.addStatement(a)
