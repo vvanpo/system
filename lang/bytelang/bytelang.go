@@ -118,7 +118,6 @@ type variableBlock struct {
 	length uint // Length in bytes
 	member []struct {
 		offset uint
-		v      statement
 	}
 }
 
@@ -128,7 +127,7 @@ func (v *variableBlock) bytecode() (b string) {
 	b += string(bBlock)
 	b += v.putWord(v.length) + v.putWord(uint(len(v.member)))
 	for _, m := range v.member {
-		b += v.putWord(m.offset) + v.putWord(v.statementIndex(m.v))
+		b += v.putWord(m.offset)
 	}
 	return
 }
@@ -176,6 +175,13 @@ func (a *assignment) bytecode() (b string) {
 	b = string(bAssignment)
 	b += a.putWord(a.statementIndex(a.receiver))
 	b += a.expression.bytecode()
+	return
+}
+
+type returnStmt struct{}
+
+func (r *returnStmt) bytecode() (b string) {
+	b = string(bReturn)
 	return
 }
 

@@ -100,14 +100,15 @@ Bytecode grammar:
 					block = bBlock, number_bytes, number_members, member_variable*
 						number_bytes = WORD
 						number_members = WORD
-						member_variable = byte_offset, statement_index
+						member_variable = byte_offset, variable
 							byte_offset = WORD
-							statement_index = WORD
-			function_call = callee, argument*, receiver*
+			function_call = callee, number_arguments, argument*, number_receivers, receiver*
 				callee = expression			# usually a reference, or a pre-defined function
+				number_arguments = WORD
 				argument = expression
+				number_receivers = WORD
 				receiver = reference		# function calls return values by assigning them to existing local variable in the caller's stack
-			if = condition, number_statements, statement_index+
+			if = condition, number_statements, statement+
 				condition = expression
 			assignment = receiver, expression
 		expression = ( bLiteral, literal )
@@ -117,7 +118,7 @@ Bytecode grammar:
 					| binary_operation
 			literal = number_bytes, BYTE+	# big-endian order
 			reference = statement_index
-			function = number_params, reference*, number_return, reference*, number_statements, statement_index+
+			function = number_params, reference*, number_return, reference*, number_statements, statement+
 				number_params = WORD
 				number_return = WORD
 			unary_operation = address_reference | ( unary_operator, expression )
