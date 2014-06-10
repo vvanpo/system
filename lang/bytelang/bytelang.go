@@ -151,17 +151,83 @@ func (f *functionCall) bytecode() (b string) {
 	return
 }
 
+type ifStmt struct {
+	*bytelang
+	condition expression
+	statement []statement
+}
+
+func (i *ifStmt) bytecode() (b string) {
+	b = string(bIf)
+	b += i.condition.bytecode()
+	for _, s := range i.statement {
+		b += i.putWord(i.statementIndex(s))
+	}
+	return
+}
+
+type assignment struct {
+	*bytelang
+	receiver statement
+	expression
+}
+
+func (a *assignment) bytecode() (b string) {
+	b = string(bAssignment)
+	b += a.putWord(a.statementIndex(a.receiver))
+	b += a.expression.bytecode()
+	return
+}
+
 type expression interface {
 	bytecode
 	value() []byte
 }
 
+type literal struct {
+	*bytelang
+	bytes []byte
+}
+
+func (l *literal) bytecode() (b string) {
+	b = string(bLiteral)
+	b += l.putWord(uint(len(l.bytes)))
+	b += string(l.bytes)
+	return
+}
+
+func (l *literal) value() (b []byte) {
+	b = l.bytes
+	return
+}
+
 type reference struct {
+	*bytelang
 	statement
 }
 
+func (r *reference) bytecode() (b string) {
+	b = string(bReference)
+	b += r.putWord(r.statementIndex(r.statement))
+	return
+}
+
+func (r *reference) value() (b []byte) {
+	return
+}
+
 type function struct {
+	*bytelang
 	parameter []statement
 	returnVal []statement
 	statement []statement
+}
+
+func (f *function) bytecode() (b string) {
+	b = string(bFunction)
+	return
+}
+
+func (f *function) value() (b []byte) {
+	return
 }

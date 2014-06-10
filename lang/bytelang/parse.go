@@ -58,6 +58,10 @@ func (p *parser) addIdentifier(id string) {
 	p.identifier = append(p.identifier, identifier(id))
 }
 
+func (p *parser) addStatement(s statement) {
+	p.statement = append(p.statement, s)
+}
+
 func (p *parser) parseBytelang() {
 	p.parseHeader()
 	p.parseIdentifierList()
@@ -137,6 +141,38 @@ func (p *parser) parseStatement() {
 }
 
 func (p *parser) parseVariable() {
+	i := p.parseWord()
+	switch p.next() {
+	case bWord:
+		v := &variableWord{
+			bytelang:   &p.bytelang,
+			identifier: &p.identifier[i-1],
+		}
+		p.addStatement(v)
+	case bByte:
+		v := &variableByte{
+			bytelang:   &p.bytelang,
+			identifier: &p.identifier[i-1],
+		}
+		p.addStatement(v)
+	case bBlock:
+		v := &variableBlock{length: p.parseWord()}
+		v.bytelang = &p.bytelang
+		v.identifier = &p.identifier[i-1]
+		for i := p.parseWord(); i > 0; i-- {
+			m := struct {
+				offset uint
+				v      statement
+			}{
+				p.parseWord(),
+				p.statement[p.parseWord()],
+			}
+			v.member = append(v.member, m)
+		}
+		p.addStatement(v)
+	default:
+		log.Fatal("Invalid variable definition")
+	}
 }
 
 func (p *parser) parseFunctionCall() {
@@ -148,6 +184,7 @@ func (p *parser) parseIf() {
 }
 
 func (p *parser) parseAssignment() {
+	e := p.parseExpression()
 }
 
 func (p *parser) parseReturn() {
