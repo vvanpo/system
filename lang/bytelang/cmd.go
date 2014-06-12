@@ -13,7 +13,7 @@ func main() {
 	} else {
 		b := new(bytelang)
 		b.wordLength = 4
-		b.start.locals = 3
-		b.start.variableTable = []variable{variable{0, "testfunc"}}
+		b.global.allocation = 3
+		b.global.locals = []variable{variable{0, "testfunc"}}
 	}
 }

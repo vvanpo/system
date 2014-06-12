@@ -32,17 +32,17 @@ const (
 // Representation of a bytelang file
 type bytelang struct {
 	wordLength int // Bytes per word
-	global	function
+	global     function
 }
 
 type function struct {
-	parent        *function
-	callerAllocation	uint // Allocation size in words
-	allocation			uint
-	returns			[]variable
-	params			[]variable
-	locals			[]variable
-	statement     []interface{}
+	parent           *function
+	callerAllocation uint // Allocation size in words
+	allocation       uint
+	returns          []variable
+	params           []variable
+	locals           []variable
+	statement        []interface{}
 }
 
 type variable struct {
@@ -51,20 +51,20 @@ type variable struct {
 }
 
 type assignment struct {
-	address		uint
-	expression	interface{}
+	address    uint
+	expression interface{}
 }
 
 type functionCall struct {
-	address		uint
-	allocation	uint	// Allocation size in words
-	returns		[]*variable		// Index into owning function's variable table
-	args		[]*variable
+	address    uint
+	allocation uint        // Allocation size in words
+	returns    []*variable // Index into owning function's variable table
+	args       []*variable
 }
 
 type thread functionCall
 
-type ifStmt	struct {
-	condition	interface{}
+type ifStmt struct {
+	condition interface{}
 	statement []interface{}
 }
