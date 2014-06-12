@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"io"
 	"log"
-	"unicode"
+	_ "unicode"
 )
 
 type parser struct {
@@ -43,29 +43,8 @@ func (p *parser) parseWord() (word uint) {
 	return
 }
 
-func (p *parser) addIdentifier(id string) {
-	for i, r := range id {
-		if r == '_' || unicode.IsLetter(r) || (unicode.IsDigit(r) && i != 0) {
-			continue
-		}
-		log.Fatal("Invalid identifier")
-	}
-	for _, s := range p.identifier {
-		if s == identifier(id) {
-			log.Println("Duplicate identifier")
-		}
-	}
-	p.identifier = append(p.identifier, identifier(id))
-}
-
-func (p *parser) addStatement(s statement) {
-	p.statement = append(p.statement, s)
-}
-
 func (p *parser) parseBytelang() {
 	p.parseHeader()
-	p.parseIdentifierList()
-	p.parseStatementList()
 }
 
 func (p *parser) parseHeader() {
@@ -89,134 +68,17 @@ func (p *parser) parseHeader() {
 	}
 }
 
-func (p *parser) parseIdentifierList() {
-	n := p.parseWord()
-	if specialIdentifiers != p.read(len(specialIdentifiers)) {
-		log.Fatal("Missing special identifier")
-	}
-	last := 0
-	for i, r := range specialIdentifiers {
-		if r == '\n' {
-			p.addIdentifier(specialIdentifiers[last:i])
-			last = i
-			n--
-		}
-	}
-	for ; n > 0; n-- {
-		id, err := p.ReadString('\n')
-		if err != nil {
-			log.Fatal("Invalid identifier list")
-		}
-		p.addIdentifier(id)
-	}
-}
-
-func (p *parser) parseStatementList() {
-	n := p.parseWord()
-	if n == 0 {
-		log.Fatal("Missing statement")
-	}
-	for ; n > 0; n-- {
-		p.parseStatement()
-	}
-	return
-}
-
-func (p *parser) parseStatement() {
-	switch p.next() {
-	case bVariable:
-		p.parseVariable()
-	case bFunctionCall:
-		p.parseFunctionCall()
-	case bIf:
-		p.parseIf()
-	case bAssignment:
-		p.parseAssignment()
-	case bReturn:
-		p.parseReturn()
-	default:
-		log.Fatal("Invalid statement")
-	}
-	return
-}
-
-func (p *parser) parseVariable() {
-	i := p.parseWord()
-	switch p.next() {
-	case bWord:
-		v := &variableWord{
-			bytelang:   &p.bytelang,
-			identifier: &p.identifier[i-1],
-		}
-		p.addStatement(v)
-	case bByte:
-		v := &variableByte{
-			bytelang:   &p.bytelang,
-			identifier: &p.identifier[i-1],
-		}
-		p.addStatement(v)
-	case bBlock:
-		v := &variableBlock{length: p.parseWord()}
-		v.bytelang = &p.bytelang
-		v.identifier = &p.identifier[i-1]
-		n := p.parseWord()
-		for i := 0; i < int(n); i++ {
-			m := struct{ offset uint }{p.parseWord()}
-			v.member = append(v.member, m)
-		}
-		p.addStatement(v)
-		for i := 0; i < int(n); i++ {
-			p.parseVariable()
-		}
-	default:
-		log.Fatal("Invalid variable definition")
-	}
-}
-
-func (p *parser) parseFunctionCall() {
-	f := &functionCall{
-		bytelang: &p.bytelang,
-		callee:   p.parseExpression(),
-	}
-	for n := p.parseWord(); n > 0; n-- {
-		f.argument = append(f.argument, p.parseExpression())
-	}
-	for n := p.parseWord(); n > 0; n-- {
-		r := p.statement[p.parseWord()-1]
-		f.receiver = append(f.receiver, r)
-	}
-	p.addStatement(f)
-}
-
-func (p *parser) parseIf() {
-	i := &ifStmt{
-		bytelang:  &p.bytelang,
-		condition: p.parseExpression(),
-	}
-	p.addStatement(i)
-	for n := p.parseWord(); n > 0; n-- {
-		p.parseStatement()
-		i.statement = append(i.statement, p.statement[len(p.statement)-1])
-	}
-}
-
-func (p *parser) parseAssignment() {
-	r := p.statement[p.parseWord()-1]
-	a := &assignment{
-		receiver:   r,
-		expression: p.parseExpression(),
-	}
-	p.addStatement(a)
-}
-
-func (p *parser) parseReturn() {
-	p.addStatement(&returnStmt{})
-}
-
-func (p *parser) parseExpression() (e expression) {
-	switch p.next() {
-	default:
-		log.Fatal("Invalid expression")
-	}
-	return
-}
+//func (p *parser) parseIdentifier() (id string) {
+//	for i, r := range id {
+//		if r == '_' || unicode.IsLetter(r) || (unicode.IsDigit(r) && i != 0) {
+//			continue
+//		}
+//		log.Fatal("Invalid identifier")
+//	}
+//	for _, s := range p.identifier {
+//		if s == identifier(id) {
+//			log.Println("Duplicate identifier")
+//		}
+//	}
+//	p.identifier = append(p.identifier, identifier(id))
+//}

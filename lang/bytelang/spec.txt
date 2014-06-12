@@ -83,34 +83,34 @@ Namespace hierarchy:
 
 Bytecode grammar:
 
-	bytelang = header, start_function		# start function doesn't require any caller allocation
+	bytelang = header, global_function
 	header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
 		pseudo_architecture = ( "0" ... "9" )+, " bytes/word"		# determines the length of WORD
-	start_function = local_allocation, variable_table, number_statements, statement+
-	expression = ( bFunction, function )
-			   | ( bReference, reference )
-			   | ( bLiteral, literal )
-			   | operation
-		function = caller_allocation, local_allocation, variables, number_statements, statement+
-			caller_allocation = length			# caller chooses to satisfy all, part, or none.  See semantics below.
-				length = WORD 					# length in words
-			local_allocation = length
-			variables = variable_table, args
-				# indices start at the first address of the caller allocation
-				variable_table = number_variables, ( variable_index, start_address, identifier, 0 )*	# identifier is null-terminated
-					variable_index = WORD		# table index, starts at 1 (0 is reserved to signify parent table)
-					start_address = WORD		# offset from start of caller allocation, can't exceed concatenation of caller+local allocations
-					identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
-				args = number_returns, return_index*, number_parameters, parameter_index*
-					number_returns = WORD
-					return_index = WORD
-					number_parameters = WORD
-					parameters_index = WORD
-			number_statements = WORD
-        reference = variable_index*			    # 0 signifies parent table, so the first non-0 index ends the search
-		literal = number_bytes, BYTE+
-			number_bytes = WORD
-		operation = unary_op | binary_op
+	global_function = local_allocation, variable_table, number_statements, statement+		# starting function doesn't require any caller allocation
+	expression = static_expr | dynamic_expr
+		static_expr = ( bFunction, function )
+					 | ( bReference, reference )
+					 | ( bLiteral, literal )
+			function = caller_allocation, local_allocation, variables, number_statements, statement+
+				caller_allocation = length			# caller chooses to satisfy all, part, or none.  See semantics below.
+					length = WORD 					# length in words
+				local_allocation = length
+				variables = variable_table, args
+					# indices start at the first address of the caller allocation
+					variable_table = number_variables, ( variable_index, start_address, identifier, 0 )*	# identifier is null-terminated
+						variable_index = WORD		# table index, starts at 1 (0 is reserved to signify parent table)
+						start_address = WORD		# offset from start of caller allocation, can't exceed concatenation of caller+local allocations
+						identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
+					args = number_returns, return_index*, number_parameters, parameter_index*
+						number_returns = WORD
+						return_index = WORD
+						number_parameters = WORD
+						parameters_index = WORD
+				number_statements = WORD
+			reference = variable_index*			    # 0 signifies parent table, so the first non-0 index ends the search
+			literal = number_bytes, BYTE+
+				number_bytes = WORD
+		dynamic_expr = unary_op | binary_op
 			unary_op = ( bDereferenceOp | bNotOp ), length, expression
             binary_op = ( bAddOp
                       | bSubtractOp
@@ -129,11 +129,12 @@ Bytecode grammar:
 			  | ( bIf, if )
 			  | bReturn
 		assignment = address, expression
-			address = expression
+			address = static_expr
 		function_call = caller_allocation, args, callee
 			callee = address
 		thread = function_call
 		if = condition, number_statements, statement+
+			condition = expression
 
 Bytecode semantics:
 
