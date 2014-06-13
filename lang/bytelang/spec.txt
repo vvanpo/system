@@ -12,6 +12,17 @@
 	  preprocessor---the bare language is not safe in any way.
 	- Preprocessing steps must be serialized and appended to bytecode to
 	  facilitate unpacking the bytelang file back into full source code.
+	- Compiled programs should have their APIs easily accessible, e.g. a simple
+	  shell function should be all that's needed to query or unit-test any
+	  public API of a binary or bytelang program, and return the results in a
+	  meaningful format.  Consistent APIs would therefore solve problems common
+	  to shell programming, where program output is idiosyncratic, unstable
+	  across program versions, and difficult to parse with many edge cases.
+	  Environment variables and command-line flags (being the usual method of
+	  input for most programs) would be replaced by simple API definitions.
+	  Automated documentation would be common across source code and user manual
+	  pages.  This encourages every program to spend time on API design and
+	  allow all programs to double as shareable libraries.
 
 Bytecode compiler:
 	- Warnings default to compilation error, must be turned off individually to
