@@ -22,7 +22,9 @@
 	  input for most programs) would be replaced by simple API definitions.
 	  Automated documentation would be common across source code and user manual
 	  pages.  This encourages every program to spend time on API design and
-	  allow all programs to double as shareable libraries.
+	  allow all programs to easily double as shareable libraries.
+	- Environment variables are annoying versions of globals, and should be
+	  ignored/not implemented.
 
 Bytecode compiler:
 	- Warnings default to compilation error, must be turned off individually to
