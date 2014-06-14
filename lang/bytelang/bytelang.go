@@ -75,23 +75,21 @@ type notOp struct {
 }
 
 type andOp binaryOp
-type bOr binaryOp
-type bXor binaryOp
-type bShiftL binaryOp
-type bLShiftR binaryOp
-type bAShiftR binaryOp
-type bAdd binaryOp
-type bSubtract binaryOp
-type bMultiply binaryOp
-type bDivideFloor binaryOp
-type bExponent binaryOp
-type bModulo binaryOp
+type orOp binaryOp
+type xorOp binaryOp
+type shiftLOp binaryOp
+type lShiftROp binaryOp
+type aShiftROp binaryOp
+type addOp binaryOp
+type subtractOp binaryOp
+type multiplyOp binaryOp
+type divideFloorOp binaryOp
+type exponentOp binaryOp
+type moduloOp binaryOp
 
 type binaryOp struct {
 	operandOne address
 	operandTwo address
 }
 
-type address interface {
-	value() uint
-}
+type address interface{}

@@ -1,10 +1,10 @@
 package main
 
-func (b *bytelang) putWord(w uint) string {
-	s := make([]byte, b.wordLength)
-	for i := b.wordLength; i >= 0; i-- {
-		s[i] = byte(0xff | w)
-		w >>= 8
+func putWord(word uint) string {
+	s := make([]byte, 8)
+	for i := 7; i >= 0; i-- {
+		s[i] = byte(0xff | word)
+		word >>= 8
 	}
 	return string(s)
 }
