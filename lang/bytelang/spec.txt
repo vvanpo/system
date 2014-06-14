@@ -106,14 +106,14 @@ Bytecode grammar:
 
     bytelang = global_function
     WORD = ? 64-bit sequence ?
-    global_function = number_statements, statement+
+    global_function = function
         statement = ( bFunction, function )
                     | ( bAllocate, allocate )
                     | ( bAssignment, assignment )
                     | ( bThread, thread )
                     | ( bIf, if )
                     | bReturn
-            function = allocate, number_statements, statement+
+            function = number_statements, statement+
                 number_statements = WORD
             allocate = length
                 length = WORD
@@ -131,7 +131,7 @@ Bytecode grammar:
                     | ( bDereference, dereference )
                     | ( bLiteral, literal )
                     | operations
-            function_call = WORD, number_statements, statement+
+            function_call = WORD
             reference = WORD
             dereference = address
             literal = WORD+

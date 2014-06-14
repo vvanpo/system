@@ -2,8 +2,13 @@ package main
 
 // Bytecode markers
 const (
+	bAddress byte = iota
+	// Globals:
+	bStackPointer
+	bFramePointer
+	bInstructionPointer
 	// Statements:
-	bFunction byte = iota
+	bFunction
 	bAllocate
 	bAssignment
 	bThread
@@ -31,34 +36,19 @@ const (
 
 // Representation of a bytelang file
 type bytelang struct {
-	wordLength int // Bytes per word
-	global     function
+	function
 }
 
 type function struct {
-	parent           *function
-	allocation       uint
-	returns          []variable
-	params           []variable
-	locals           []variable
-	statement        []interface{}
+	parent    *function
+	statement []interface{}
 }
 
-type variable struct {
-	address    uint
-	identifier string
-}
+type allocate uint
 
 type assignment struct {
-	address    uint
-	expression interface{}
-}
-
-type functionCall struct {
-	address    uint
-	allocation uint        // Allocation size in words
-	returns    []*variable // Index into owning function's variable table
-	args       []*variable
+	address
+	value address
 }
 
 type thread functionCall
@@ -66,4 +56,42 @@ type thread functionCall
 type ifStmt struct {
 	condition interface{}
 	statement []interface{}
+}
+
+type returnStmt struct{}
+
+type functionCall uint
+
+type reference uint
+
+type dereference struct {
+	address
+}
+
+type literal []uint
+
+type notOp struct {
+	address
+}
+
+type andOp binaryOp
+type bOr binaryOp
+type bXor binaryOp
+type bShiftL binaryOp
+type bLShiftR binaryOp
+type bAShiftR binaryOp
+type bAdd binaryOp
+type bSubtract binaryOp
+type bMultiply binaryOp
+type bDivideFloor binaryOp
+type bExponent binaryOp
+type bModulo binaryOp
+
+type binaryOp struct {
+	operandOne address
+	operandTwo address
+}
+
+type address interface {
+	value() uint
 }
