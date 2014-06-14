@@ -61,16 +61,24 @@ Bytecode compiler:
     - Bytecode operates on multiple fictional address spaces, as segments.
       Such segments allow the programmer to let the native compiler worry
       about page-alignment and space constraints.  Each thread stack gets their
-      own address space, as defined by the word-length in the file header. The
-      heap is overlaid on all stack segments, meaning no special
-      segment-referencing needs to take place to access the heap.  Each stack
-      is simply initialized to begin at address ~0, and the heap always begins
-      at address 0.
+      own 64-bit address space. The heap is overlaid on all stack segments,
+      meaning no special segment-referencing needs to take place to access the
+      heap.  Each stack is simply initialized to begin at address ~0, and the
+      heap always begins at address 0.
     - Variable references are limited to the owning stack segment, and
       globals.  Initializing a new thread hence breaks lexical
       scoping---variables must be passed as parameters to the new stack.
     - Code is data.  Pre-defined functions are literals on the heap, just as any
       other pre-defined data is.
+    - An expression is defined to be a sequence of instructions that places one
+      or more return values at the bottom of the stack.  Expressions may or may
+      not have side-effects.
+    - Anything that does not have a return value is called a statment.
+    - Variables in bytecode don't have an associated identifier, but simply an
+      address offset from the frame pointer of the local function.  Non-local
+      variables must first dereference the frame pointer, so operations with
+      non-local operands require one or more extra dereference operations in
+      their definition.
 
 Native compiler:
     - To make a portable language, we need word sizes to potentially be as small
@@ -96,72 +104,53 @@ Namespace hierarchy:
 
 Bytecode grammar:
 
-    bytelang = header, global_function
-    header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
-        pseudo_architecture = ( "0" ... "9" )+, " bytes/word"       # determines the length of WORD
-    global_function = local_allocation, variable_table, number_statements, statement+
-    expression = static_expr | dynamic_expr
-        static_expr = ( bFunction, function )
-                     | ( bReference, reference )
-                     | ( bLiteral, literal )
-            function = caller_allocation, local_allocation, variables, number_statements, statement+
-                caller_allocation = length          # caller chooses to satisfy all, part, or none.  See semantics below.
-                    length = WORD                   # length in words
-                local_allocation = length
-                variables = variable_table, args
-                    # indices start at the first address of the caller allocation
-                    variable_table = number_variables, ( variable_index, start_address, identifier, 0 )*    # identifier is null-terminated
-                        variable_index = WORD       # table index, starts at 1 (0 is reserved to signify parent table)
-                        start_address = WORD        # offset from start of caller allocation, can't exceed concatenation of caller+local allocations
-                        identifier = ( ? utf-8 letter ? | "_" ), ( ? utf-8 letter ? | "_" | ? utf-8 digit ? )*
-                    args = number_returns, return_index*, number_parameters, parameter_index*
-                        number_returns = WORD
-                        return_index = WORD
-                        number_parameters = WORD
-                        parameters_index = WORD
+    bytelang = global_function
+    WORD = ? 64-bit sequence ?
+    global_function = number_statements, statement+
+        statement = ( bFunction, function )
+                    | ( bAllocate, allocate )
+                    | ( bAssignment, assignment )
+                    | ( bThread, thread )
+                    | ( bIf, if )
+                    | bReturn
+            function = allocate, number_statements, statement+
                 number_statements = WORD
-            reference = variable_index*             # 0 signifies parent table, so the first non-0 index ends the search
-            literal = number_bytes, BYTE+
-                number_bytes = WORD
-        dynamic_expr = unary_op | binary_op
-            unary_op = ( bDereferenceOp | bNotOp ), length, expression
-            binary_op = ( bAddOp
-                      | bSubtractOp
-                      | bMultiplyOp
-                      | bDivideFloorOp
-                      | bExponentOp
-                      | bModuloOp
-                      | bAndOp
-                      | bOrOp
-                      | bXorOp
-                      | bRotateLeftOp
-                      | bRotateRightOp ), length, expression, length, expression
-    statement = ( bAssignment, assignment )
-              | ( bFunctionCall, function_call )
-              | ( bThread, thread )
-              | ( bIf, if )
-              | bReturn
-        assignment = address, expression
-            address = static_expr
-        function_call = caller_allocation, args, callee
-            callee = address
-        thread = function_call
-        if = condition, number_statements, statement+
-            condition = expression
+            allocate = length
+                length = WORD
+            assignment = address, address, length
+                address = global | ( bAddress, WORD )
+                global = ( bStackPointer, offset )
+                        | ( bFramePointer, offset )
+                        | ( bInstructionPointer )
+                    offset = WORD
+            thread = function_call
+            if = condition, number_statements, statement+
+                condition = expression
+        expression = ( bFunctionCall, function_call )
+                    | ( bReference, reference )
+                    | ( bDereference, dereference )
+                    | ( bLiteral, literal )
+                    | operations
+            function_call = WORD, number_statements, statement+
+            reference = WORD
+            dereference = address
+            literal = WORD+
+            operations = ( bNot, address ) | binary_op
+                binary_op = op, address, address
+                op = bAnd | bOr | bXor | bShiftL | bLShiftR
+                    | bAShiftR | bAdd | bSubtract | bMultiply
+                    | bDivideFloor | bExponent | bModulo
 
 Bytecode semantics:
 
-    - Variable references search in the local table first, then the parent,
-      etc, up to the global table.
-    - Variables represent a single address, and have no length information
-      associated with them.  Operations determine reference granularity.
+    - Variables are represented by a single address, and have no length
+      information associated with them.  Operations determine reference
+      granularity.
     - Space for variables are allocated at the point where they are defined.
       Conditional execution of some expressions means stack-frames aren't a
       well-defined length for each function.
-    - An implicit global table has special variables not locked to a specific
-      stack-allocated address offset:
-        '_'     discard value: when passed as a return value to a function, the
-                value is ignored and cannot be referenced.
+    - Implicit global variables are not locked to a specific stack-allocated
+      address offset:
         '_sp'   stack pointer: '_sp' is updated with each allocation and
                 deallocation of the stack.
         '_fp'   frame pointer: like the stack pointer, _fp is automatically
@@ -169,17 +158,25 @@ Bytecode semantics:
         '_ip'   instruction pointer: can be used to implement jumps by
                 assigning address to '_ip'.
     - All globals are local to the owning stack segment when referenced.
-    - There is no distinction between "statement" and "expression", everything
-      is just called an expression.  However, there is a clear distinction
-      between expressions with strictly compile-time side-effects (static
-      expressions) versus those with possible run-time side-effects (dynamic
-      expressions).
-    - Static expressions have deterministic values, and side-effects are
-      evident within the program binary.
-    - Dynamic expressions consist of operations on either static or dynamic
-      expressions.
-    - The return value of any expression is a memory address, usually that of
-      the stored value that was operated on.
+    - Assigning to or reading from globals must be of length word.
+    - Expression must return a value, so they generally consist of 'push'
+      instructions:
+        - function call:    allocates return variables before executing,
+                            allocated space could represent multiple variables
+        - address:          pushes literal address value onto stack
+        - dereference:      copies value pointed to by address onto the stack,
+                            requires length argument
+        - literal:          variable-sized compile-time value pushed onto stack
+        - not, and, or, xor, shiftl, lshiftr, ashiftr, add, subtract, multiply,
+          divide floor, exponent, modulo:
+                            pushes result of operation onto stack, except when
+                            an operand itself is already at the bottom of the
+                            stack, in which case the operand is simply
+                            overwritten by the operation
+    - To copy return values into a variable, a stack pointer offset and length
+      is passed to an assignment statement.
+    - Only function calls and statements can have side-effects.  No other
+      expressions do.
     - Stack-frame diagram:
 
         caller_local    |
@@ -191,9 +188,6 @@ Bytecode semantics:
         callee_local
         ------------
 
-        - Return variables are local variables of the caller when possible, and
-          otherwise are temporary variables which are copied into the assigned local
-          variables of the caller.
         - *In many cases, a function can defined to use the same variable as
           both a parameter and a return value.
         - Arguments are pushed onto the stack backwards (i.e. last argument pushed

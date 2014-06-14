@@ -3,30 +3,30 @@ package main
 // Bytecode markers
 const (
 	// Statements:
-	bAssignment   byte = iota // Assignment statement
-	bFunctionCall             // Function call statement
+	bFunction byte = iota
+	bAllocate
+	bAssignment
 	bThread
 	bIf
 	bReturn
 	// Expressions:
-	bFunction  // Function definition
-	bReference // Variable reference
-	bLiteral   // Literal value
-	// Unary operators:
-	bDereferenceOp // Variable dereference operator
-	bNotOp
-	// Binary operators:
-	bAddOp
-	bSubtractOp
-	bMultiplyOp
-	bDivideFloorOp
-	bExponentOp
-	bModuloOp
-	bAndOp
-	bOrOp
-	bXorOp
-	bRotateLeftOp
-	bRotateRightOp
+	bFunctionCall
+	bReference
+	bDereference
+	bLiteral
+	bNot
+	bAnd
+	bOr
+	bXor
+	bShiftL
+	bLShiftR
+	bAShiftR
+	bAdd
+	bSubtract
+	bMultiply
+	bDivideFloor
+	bExponent
+	bModulo
 )
 
 // Representation of a bytelang file
@@ -37,7 +37,6 @@ type bytelang struct {
 
 type function struct {
 	parent           *function
-	callerAllocation uint // Allocation size in words
 	allocation       uint
 	returns          []variable
 	params           []variable
