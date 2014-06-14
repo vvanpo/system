@@ -39,23 +39,28 @@ type bytelang struct {
 	function
 }
 
+type statement interface {
+	compile() string
+}
+
 type function struct {
 	parent    *function
-	statement []interface{}
+	statement []statement
 }
 
 type allocate uint
 
 type assignment struct {
 	address
-	value address
+	value  address
+	length uint
 }
 
 type thread functionCall
 
 type ifStmt struct {
 	condition interface{}
-	statement []interface{}
+	statement []statement
 }
 
 type returnStmt struct{}
@@ -66,6 +71,7 @@ type reference uint
 
 type dereference struct {
 	address
+	length uint
 }
 
 type literal []uint
@@ -92,4 +98,16 @@ type binaryOp struct {
 	operandTwo address
 }
 
-type address interface{}
+type address interface {
+	compile() string
+}
+
+type stackPointer struct {
+	offset uint
+}
+
+type framePointer struct {
+	offset uint
+}
+
+type instructionPointer struct{}

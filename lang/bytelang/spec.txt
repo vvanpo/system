@@ -133,7 +133,7 @@ Bytecode grammar:
                     | operations
             function_call = WORD
             reference = WORD
-            dereference = address
+            dereference = address, length
             literal = WORD+
             operations = ( bNot, address ) | binary_op
                 binary_op = op, address, address
@@ -163,7 +163,7 @@ Bytecode semantics:
       instructions:
         - function call:    allocates return variables before executing,
                             allocated space could represent multiple variables
-        - address:          pushes literal address value onto stack
+        - reference:        pushes literal address value onto stack
         - dereference:      copies value pointed to by address onto the stack,
                             requires length argument
         - literal:          variable-sized compile-time value pushed onto stack
