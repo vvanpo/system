@@ -1,6 +1,6 @@
 
 1-to-1 mapping of bytecode <-> language syntax/semantics:
-    - bytecode hence includes complete variable list
+    - Bytecode hence includes complete variable list
     - Build a bytecode translator to C and/or ELF/SysV
     - Build a virtual machine for ELF/SysV?
     - Literate programming: embedded documentation/specification that defines
@@ -151,11 +151,11 @@ Bytecode grammar:
 
 Bytecode semantics:
 
-    - variable references search in the local table first, then the parent,
+    - Variable references search in the local table first, then the parent,
       etc, up to the global table.
-    - variables represent a single address, and have no length information
+    - Variables represent a single address, and have no length information
       associated with them.  Operations determine reference granularity.
-    - an implicit global table has special variables not locked to a specific
+    - An implicit global table has special variables not locked to a specific
       stack-allocated address offset:
         '_'     discard value: when passed as a return value to a function, the
                 value is ignored and cannot be referenced.
@@ -165,37 +165,38 @@ Bytecode semantics:
                 updated on function calls.
         '_ip'   instruction pointer: can be used to implement jumps by
                 assigning address to '_ip'.
-    - all globals are local to the owning stack segment when referenced.
-    - function calls must be preceded by the necessary stack allocation for
-      arguments and return values, as defined by the function.  By placing
-      local variables in the correct order and at the bottom of the stack, a
-      caller can optimize a function call by no requiring temporary stack
-      space.
-    - Expressions return variable-sized data, and can have side effects:
-        - function expressions have the side effect of placing a block of
-          instructions on the heap, and return the address at which it is
-          placed
-        - variable references return a word representing an absolute address
-        - literals return a variable-sized sequence of bytes
-        - operations (except dereference) require defining the length of their
-          return values
+    - All globals are local to the owning stack segment when referenced.
+    - No new globals can be defined, all definitions are within the scope of the
+      start function.
+    - There is no distinction between "statement" and "expression", everything
+      is just called an expression.  However, there is a clear distinction
+      between expressions with strictly compile-time side-effects (static
+      expressions) versus those with possible run-time side-effects (dynamic
+      expressions).
+    - Static expressions are have deterministic values, and side-effects are
+      evident within the program binary.
+    - Dynamic expressions consist of operations on either static or dynamic
+      expressions.
+    - The return value of any expression is a memory address, usually of the
+      stored value that was operated on.
+    - Stack-frame diagram:
 
-Stack frame diagram:
+        caller_local    |
+        ------------    |
+        return_vars*    |   grows down
+        args**          |
+        fp              v
+        ret_address
+        callee_local
+        ------------
 
-    ------------
-    callee_local
-    ret_address
-    fp              ^
-    args**          |
-    return_vars*    |   grows up
-    ------------    |
-    caller_local    |
-
-    *Return variables are local variables of the caller when possible, and
-    otherwise are temporary variables which are copied into the assigned local
-    variables of the caller.
-    **In a special case, a function can defined to use the same variable as both
-    a parameter and a return value, in which case no extra stack space is
-    allocated for either when possible, or a single temporary location is
-    allocated and copied to the caller's local variable assigned by the call.
+        - *Return variables are local variables of the caller when possible, and
+          otherwise are temporary variables which are copied into the assigned local
+          variables of the caller.
+        - **In a special case, a function can defined to use the same variable as
+          both a parameter and a return value, in which case no extra stack space is
+          allocated for either when possible, or a single temporary location is
+          allocated and copied to the caller's local variable assigned by the call.
+        - Arguments are pushed onto the stack backwards (i.e. last argument pushed
+          first).
 
