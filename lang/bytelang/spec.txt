@@ -99,7 +99,7 @@ Bytecode grammar:
     bytelang = header, global_function
     header = "Version 0.0\nArch.: ", pseudo_architecture, "\n"
         pseudo_architecture = ( "0" ... "9" )+, " bytes/word"       # determines the length of WORD
-    global_function = local_allocation, variable_table, number_statements, statement+       # starting function doesn't require any caller allocation
+    global_function = local_allocation, variable_table, number_statements, statement+
     expression = static_expr | dynamic_expr
         static_expr = ( bFunction, function )
                      | ( bReference, reference )
@@ -155,6 +155,9 @@ Bytecode semantics:
       etc, up to the global table.
     - Variables represent a single address, and have no length information
       associated with them.  Operations determine reference granularity.
+    - Space for variables are allocated at the point where they are defined.
+      Conditional execution of some expressions means stack-frames aren't a
+      well-defined length for each function.
     - An implicit global table has special variables not locked to a specific
       stack-allocated address offset:
         '_'     discard value: when passed as a return value to a function, the
@@ -166,37 +169,33 @@ Bytecode semantics:
         '_ip'   instruction pointer: can be used to implement jumps by
                 assigning address to '_ip'.
     - All globals are local to the owning stack segment when referenced.
-    - No new globals can be defined, all definitions are within the scope of the
-      start function.
     - There is no distinction between "statement" and "expression", everything
       is just called an expression.  However, there is a clear distinction
       between expressions with strictly compile-time side-effects (static
       expressions) versus those with possible run-time side-effects (dynamic
       expressions).
-    - Static expressions are have deterministic values, and side-effects are
+    - Static expressions have deterministic values, and side-effects are
       evident within the program binary.
     - Dynamic expressions consist of operations on either static or dynamic
       expressions.
-    - The return value of any expression is a memory address, usually of the
-      stored value that was operated on.
+    - The return value of any expression is a memory address, usually that of
+      the stored value that was operated on.
     - Stack-frame diagram:
 
         caller_local    |
         ------------    |
-        return_vars*    |   grows down
-        args**          |
+        return_vars     |   grows down
+        args*           |
         fp              v
         ret_address
         callee_local
         ------------
 
-        - *Return variables are local variables of the caller when possible, and
+        - Return variables are local variables of the caller when possible, and
           otherwise are temporary variables which are copied into the assigned local
           variables of the caller.
-        - **In a special case, a function can defined to use the same variable as
-          both a parameter and a return value, in which case no extra stack space is
-          allocated for either when possible, or a single temporary location is
-          allocated and copied to the caller's local variable assigned by the call.
+        - *In many cases, a function can defined to use the same variable as
+          both a parameter and a return value.
         - Arguments are pushed onto the stack backwards (i.e. last argument pushed
           first).
 
