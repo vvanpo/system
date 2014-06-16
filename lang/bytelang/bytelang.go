@@ -1,4 +1,4 @@
-package main
+package bytelang
 
 // Bytecode markers
 const (
@@ -36,7 +36,7 @@ const (
 )
 
 // Representation of a bytelang file
-type bytelang struct {
+type Bytelang struct {
 	function
 }
 

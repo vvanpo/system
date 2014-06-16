@@ -1,4 +1,4 @@
-package main
+package bytelang
 
 func putWord(word uint) string {
 	s := make([]byte, 8)
@@ -9,7 +9,7 @@ func putWord(word uint) string {
 	return string(s)
 }
 
-func (b *bytelang) compile() (s string) {
+func (b *Bytelang) Compile() (s string) {
 	s = b.function.compile()[1:] // Omit the marker bytecode for the global function
 	return
 }

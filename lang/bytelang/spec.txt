@@ -123,7 +123,7 @@ Bytecode grammar:
             allocate = length
                 length = WORD
             deallocate = length
-            assignment = address, expression, length
+            assignment = address, length, expression
                 address = global | ( bAddress, WORD )
                 global = ( bStackPointer, offset )
                         | ( bFramePointer, offset )
