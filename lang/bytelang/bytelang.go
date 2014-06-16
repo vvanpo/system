@@ -10,6 +10,7 @@ const (
 	// Statements:
 	bFunction
 	bAllocate
+	bDeallocate
 	bAssignment
 	bThread
 	bIf
@@ -49,6 +50,8 @@ type function struct {
 }
 
 type allocate uint
+
+type deallocate uint
 
 type assignment struct {
 	address

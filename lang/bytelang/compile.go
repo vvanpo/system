@@ -29,6 +29,12 @@ func (a allocate) compile() (s string) {
 	return
 }
 
+func (d deallocate) compile() (s string) {
+	s = string(bDeallocate)
+	s += putWord(uint(d))
+	return
+}
+
 func (a assignment) compile() (s string) {
 	s = string(bAssignment)
 	s += a.address.compile()

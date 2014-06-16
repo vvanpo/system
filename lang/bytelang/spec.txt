@@ -52,24 +52,28 @@ Bytecode compiler:
       required for architectures that don't allow use of the full address
       space (e.g. x86-64 non-canonical addresses) or operating systems that
       prohibit use of specific memory regions (e.g. Windows NT).
-    - Translation allows for a portable, consistent representation of the call
-      stack across all architectures, with the native compiler optimizing out
-      the details.
-    - A compiler pragma could allow for a real address to pass through
-      bytecode-to-native compilation, in the special case where systems code
-      (drivers, kernel code, etc.) needs to access a special memory location.
-    - Bytecode operates on multiple fictional address spaces, as segments.
-      Such segments allow the programmer to let the native compiler worry
-      about page-alignment and space constraints.  Each thread stack gets their
-      own 64-bit address space. The heap is overlaid on all stack segments,
-      meaning no special segment-referencing needs to take place to access the
-      heap.  Each stack is simply initialized to begin at address ~0, and the
-      heap always begins at address 0.
-    - Variable references are limited to the owning stack segment, and
+        - Translation allows for a portable, consistent representation of the
+          call stack across all architectures, with the native compiler
+          optimizing out the details.
+        - A compiler pragma could allow for a real address to pass through
+          bytecode-to-native compilation, in the special case where systems code
+          (drivers, kernel code, etc.) needs to access a special memory
+          location.
+        - Bytecode operates on multiple fictional address spaces, as segments.
+          Such segments allow the programmer to let the native compiler worry
+          about page-alignment and space constraints.  Each thread stack gets
+          their own 64-bit address space. The heap is overlaid on all stack
+          segments, meaning no special segment-referencing needs to take place
+          to access the heap.  Each stack is simply initialized to begin at
+          address ~0, and the heap always begins at address 0.
+        - Statements are stored on the heap, but their native-code length is
+          dependent on the underlying architecture.  The bytecode length of the
+          statement definitions is used instead to calculate address references
+          into statements, and the native compiler takes care of offsetting the
+          addresses to match their real length.
+    - Stack address references are limited to the owning stack segment, and
       globals.  Initializing a new thread hence breaks lexical
       scoping---variables must be passed as parameters to the new stack.
-    - Code is data.  Pre-defined functions are literals on the heap, just as any
-      other pre-defined data is.
     - An expression is defined to be a sequence of instructions that places one
       or more return values at the bottom of the stack.  Expressions may or may
       not have side-effects.
@@ -109,6 +113,7 @@ Bytecode grammar:
     global_function = function
         statement = ( bFunction, function )
                     | ( bAllocate, allocate )
+                    | ( bDeallocate, deallocate )
                     | ( bAssignment, assignment )
                     | ( bThread, thread )
                     | ( bIf, if )
