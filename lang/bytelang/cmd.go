@@ -6,11 +6,14 @@ import (
 )
 
 func (f *function) add(s ...statement) {
-	f.statement = append(f.statement, s...)
+	*f = append(*f, s...)
 }
 
 func main() {
 	b := new(bytelang)
+	b.add(function{
+
+	})
 	b.add(allocate(8))
 	b.add(assignment{
 		stackPointer{0},

@@ -16,8 +16,8 @@ func (b *bytelang) compile() (s string) {
 
 func (f function) compile() (s string) {
 	s = string(bFunction)
-	s += putWord(uint(len(f.statement)))
-	for _, stmt := range f.statement {
+	s += putWord(uint(len(f)))
+	for _, stmt := range f {
 		s += stmt.compile()
 	}
 	return

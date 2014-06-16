@@ -44,10 +44,7 @@ type statement interface {
 	compile() string
 }
 
-type function struct {
-	parent    *function
-	statement []statement
-}
+type function []statement
 
 type allocate uint
 
