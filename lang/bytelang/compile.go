@@ -9,6 +9,7 @@ func putWord(word uint) string {
 	return string(s)
 }
 
+// Compile a Bytelang structure into bytecode
 func (b *Bytelang) Compile() (s string) {
 	s = b.function.compile()[1:] // Omit the marker bytecode for the global function
 	return
