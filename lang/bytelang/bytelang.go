@@ -52,18 +52,22 @@ type deallocate uint
 
 type assignment struct {
 	address
-	value  address
+	value  expression
 	length uint
 }
 
 type thread functionCall
 
 type ifStmt struct {
-	condition interface{}
+	condition expression
 	statement []statement
 }
 
 type returnStmt struct{}
+
+type expression interface {
+	compile() string
+}
 
 type functionCall uint
 
@@ -76,26 +80,9 @@ type dereference struct {
 
 type literal []uint
 
-type notOp struct {
-	address
-}
-
-type andOp binaryOp
-type orOp binaryOp
-type xorOp binaryOp
-type shiftLOp binaryOp
-type lShiftROp binaryOp
-type aShiftROp binaryOp
-type addOp binaryOp
-type subtractOp binaryOp
-type multiplyOp binaryOp
-type divideFloorOp binaryOp
-type exponentOp binaryOp
-type moduloOp binaryOp
-
-type binaryOp struct {
-	operandOne address
-	operandTwo address
+type operation struct {
+	marker byte
+	length uint
 }
 
 type address interface {

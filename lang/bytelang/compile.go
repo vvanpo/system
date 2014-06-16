@@ -45,11 +45,16 @@ func (a assignment) compile() (s string) {
 
 func (t thread) compile() (s string) {
 	s = string(bThread)
+	s += putWord(uint(t))
 	return
 }
 
 func (i ifStmt) compile() (s string) {
 	s = string(bIf)
+	s += i.condition.compile()
+	for _, stmt := range i.statement {
+		s += stmt.compile()
+	}
 	return
 }
 
@@ -85,9 +90,9 @@ func (l literal) compile() (s string) {
 	return
 }
 
-func (n notOp) compile() (s string) {
-	s = string(bNot)
-	s += n.address.compile()
+func (o operation) compile() (s string) {
+	s = string(o.marker)
+	s += putWord(o.length)
 	return
 }
 

@@ -10,16 +10,4 @@ func (f *function) add(s ...statement) {
 }
 
 func main() {
-	b := new(bytelang)
-	b.add(function{
-
-	})
-	b.add(allocate(8))
-	b.add(assignment{
-		stackPointer{0},
-		instructionPointer{},
-		8,
-	})
-	c := b.compile()
-	print(c)
 }

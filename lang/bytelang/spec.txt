@@ -122,7 +122,8 @@ Bytecode grammar:
                 number_statements = WORD
             allocate = length
                 length = WORD
-            assignment = address, address, length
+            deallocate = length
+            assignment = address, expression, length
                 address = global | ( bAddress, WORD )
                 global = ( bStackPointer, offset )
                         | ( bFramePointer, offset )
@@ -140,11 +141,10 @@ Bytecode grammar:
             reference = WORD
             dereference = address, length
             literal = WORD+
-            operations = ( bNot, address ) | binary_op
-                binary_op = op, address, address
-                op = bAnd | bOr | bXor | bShiftL | bLShiftR
-                    | bAShiftR | bAdd | bSubtract | bMultiply
-                    | bDivideFloor | bExponent | bModulo
+            operations = op, length
+                op = bNot | bAnd | bOr | bXor | bShiftL | bLShiftR | bAShiftR
+                    | bAdd | bSubtract | bMultiply | bDivideFloor | bExponent
+                    | bModulo
 
 Bytecode semantics:
 
@@ -164,20 +164,19 @@ Bytecode semantics:
                 assigning address to '_ip'.
     - All globals are local to the owning stack segment when referenced.
     - Assigning to or reading from globals must be of length word.
-    - Expression must return a value, so they generally consist of 'push'
-      instructions:
-        - function call:    allocates return variables before executing,
-                            allocated space could represent multiple variables
-        - reference:        pushes literal address value onto stack
+    - Expressions return a value by placing it at the bottom of the stack, but
+      require the space to be allocated beforehand:
+        - function call:    modifies return and argument variables previously
+                            allocated by the caller
+        - reference:        copies literal address value onto stack
         - dereference:      copies value pointed to by address onto the stack,
                             requires length argument
-        - literal:          variable-sized compile-time value pushed onto stack
-        - not, and, or, xor, shiftl, lshiftr, ashiftr, add, subtract, multiply,
+        - literal:          variable-sized compile-time value copied onto stack
+        - not:              modifies operand in-place
+        - and, or, xor, shiftl, lshiftr, ashiftr, add, subtract, multiply,
           divide floor, exponent, modulo:
-                            pushes result of operation onto stack, except when
-                            an operand itself is already at the bottom of the
-                            stack, in which case the operand is simply
-                            overwritten by the operation
+                            overwrites first operand, and dellocates the second
+    - Binary operations require operands to be of equal length.
     - To copy return values into a variable, a stack pointer offset and length
       is passed to an assignment statement.
     - Only function calls and statements can have side-effects.  No other
