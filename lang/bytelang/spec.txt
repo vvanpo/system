@@ -71,6 +71,16 @@ Bytecode compiler:
           statement definitions is used instead to calculate address references
           into statements, and the native compiler takes care of offsetting the
           addresses to match their real length.
+    - Eval:
+        - It's not feasible to embed an interpreter into the runtime of every
+          process
+        - Instead, the standard library can implement eval in tiers, by
+          optionally loading a full language interpreter, a bytecode compiler,
+          and/or a native compiler into the runtime.  Lastly, a 'bare' eval
+          implementation would simply consist of copying native code into the
+          heap and pointing the instruction pointer to the right address.  In
+          this way, a REPL could be built with minimal overhead by using a
+          secondary program to compile input, and passing it to the process.
     - Stack address references are limited to the owning stack segment, and
       globals.  Initializing a new thread hence breaks lexical
       scoping---variables must be passed as parameters to the new stack.
