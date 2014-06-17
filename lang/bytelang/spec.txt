@@ -71,16 +71,6 @@ Bytecode compiler:
           statement definitions is used instead to calculate address references
           into statements, and the native compiler takes care of offsetting the
           addresses to match their real length.
-    - Eval:
-        - It's not feasible to embed an interpreter into the runtime of every
-          process
-        - Instead, the standard library can implement eval in tiers, by
-          optionally loading a full language interpreter, a bytecode compiler,
-          and/or a native compiler into the runtime.  Lastly, a 'bare' eval
-          implementation would simply consist of copying native code into the
-          heap and pointing the instruction pointer to the right address.  In
-          this way, a REPL could be built with minimal overhead by using a
-          secondary program to compile input, and passing it to the process.
     - Stack address references are limited to the owning stack segment, and
       globals.  Initializing a new thread hence breaks lexical
       scoping---variables must be passed as parameters to the new stack.
@@ -117,7 +107,6 @@ Namespace hierarchy:
           and "sym1" it can be referenced directly from "sym1": "sym1.sym3"
 
 Bytecode grammar:
-
     bytelang = global_function
     WORD = ? 64-bit sequence ?
     global_function = function
@@ -157,7 +146,6 @@ Bytecode grammar:
                     | bModulo
 
 Bytecode semantics:
-
     - Variables are represented by a single address, and have no length
       information associated with them.  Operations determine reference
       granularity.
@@ -207,3 +195,25 @@ Bytecode semantics:
         - Arguments are pushed onto the stack backwards (i.e. last argument pushed
           first).
 
+Standard library:
+    - Eval:
+        - It's not feasible to embed an interpreter into the runtime of every
+          process
+        - Instead, the standard library can implement eval in tiers, by
+          optionally loading a full language interpreter, a bytecode compiler,
+          and/or a native compiler into the runtime.  Lastly, a 'bare' eval
+          implementation would simply consist of copying native code into the
+          heap and pointing the instruction pointer to the right address.  In
+          this way, a REPL could be built with minimal overhead by using a
+          secondary program to compile input, and passing it to the process.
+    - Different tiers of eval simply packages that make up the compiler
+      itself, as the entire compiler toolchain should be self-hosted within the
+      language's own standard library.  This would make it very easy to build
+      tools for development, by reusing modules for compiling and parsing.
+    - Ideally, it should be possible to compile a runtime that doesn't require
+      an underlying operating system, hence the standard library should contain
+      packages that implement a microkernel.  This microkernel should be
+      modular enough to allow for configurable complexity, i.e. whether or not
+      to allow for multiprocessing, shared libraries/dynamic linking, etc.  Such
+      a kernel could even be extended to implement a hypervisor or full
+      operating system.
