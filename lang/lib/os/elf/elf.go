@@ -1,4 +1,6 @@
-package os
+// Executable and Linkable Format
+// http://refspecs.linux-foundation.org/elf/gabi4+/contents.html
+package elf
 
 const (
 	// Type
@@ -33,18 +35,18 @@ const (
 	ei_pad        = 9
 	ei_nident     = 16
 	// Identification values
-	ELFMAG0        = 0x7f
-	ELFMAG1        = 'E'
-	ELFMAG2        = 'L'
-	ELFMAG3        = 'F'
-	ELFCLASSNONE   = 0
-	ELFCLASS32     = 1
-	ELFCLASS64     = 2
-	ELFDATANONE    = 0
-	ELFDATA2LSB    = 1 // Little endian: MSB at lowest address
-	ELFDATA2MSB    = 2 // Big endian: MSB at highest address
-	ELFOSABI_NONE  = 0
-	ELFOSABI_LINUX = 3
+	elfmag0        = 0x7f
+	elfmag1        = 'E'
+	elfmag2        = 'L'
+	elfmag3        = 'F'
+	ElfClassNone   = 0
+	ElfClass32     = 1
+	ElfClass64     = 2
+	ElfDataNone    = 0
+	ElfData2LSB    = 1 // Little endian: MSB at lowest address
+	ElfData2MSB    = 2 // Big endian: MSB at highest address
+	ElfOsAbi_None  = 0
+	ElfOsAbi_Linux = 3
 	// Special section indices
 	shn_undef = 0 // Undefined, missing, or irrelevant section reference
 	// If #-of-sections is greater than loreserve, elfHeader.shnum == shn_undef
@@ -99,37 +101,36 @@ const (
 )
 
 // Representation of an ELF object file
-// http://refspecs.linux-foundation.org/elf/gabi4+/contents.html
-type Elf struct {
+type File struct {
 	ident     [ei_nident]byte // Identification
 	elfHeader interface{}
 }
 
-func New(class, data, osabi, abiversion byte) (e *Elf) {
-	e = new(Elf)
-	e.ident[ei_mag0] = ELFMAG0
-	e.ident[ei_mag1] = ELFMAG1
-	e.ident[ei_mag2] = ELFMAG2
-	e.ident[ei_mag3] = ELFMAG3
-	e.ident[ei_class] = class
-	e.ident[ei_data] = data
-	e.ident[ei_version] = ev_current
-	e.ident[ei_osabi] = osabi
-	if osabi == ELFOSABI_NONE {
-		e.ident[ei_abiversion] = 0
+func New(class, data, osabi, abiversion byte) (f *File) {
+	f = new(File)
+	f.ident[ei_mag0] = elfmag0
+	f.ident[ei_mag1] = elfmag1
+	f.ident[ei_mag2] = elfmag2
+	f.ident[ei_mag3] = elfmag3
+	f.ident[ei_class] = class
+	f.ident[ei_data] = data
+	f.ident[ei_version] = ev_current
+	f.ident[ei_osabi] = osabi
+	if osabi == ElfOsAbi_None {
+		f.ident[ei_abiversion] = 0
 	} else {
-		e.ident[ei_abiversion] = abiversion
+		f.ident[ei_abiversion] = abiversion
 	}
 	switch class {
-	case ELFCLASS64:
-		e.elfHeader = elfHeader64{}
-	case ELFCLASS32:
-		e.elfHeader = elfHeader32{}
+	case ElfClass64:
+		f.elfHeader = elfHeader64{}
+	case ElfClass32:
+		f.elfHeader = elfHeader32{}
 	}
 	return
 }
 
-func (e *Elf) Compose() (s string) {
+func (f *File) Compose() (s string) {
 	return
 }
 
