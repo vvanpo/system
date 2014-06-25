@@ -1,0 +1,40 @@
+
+Assignment:
+	New identifiers result in automatic allocation on the stack.
+-----------
+	v: 10
+
+If statement:
+	A zero expression results in a branch skipping the statement-block.
+-------------
+	if < expression >
+		< statements>
+
+Defining functions:
+-------------------
+	h: func x, y, byte c -> z, r
+		< statements >
+	callback: func x, z -> y
+		return x z
+
+Calling functions:
+	Just like sh-derivatives (bash, ash, ksh, etc.), calling a function is as
+	simple as writing its identifier.  This complicates definitions of anonymous
+	functions, as there is an ambiguity between defining a function and calling
+	one.  The solution is that context determines when they are called;
+	assignment to a variable or passing as an argument (assigning to an argument
+	variable) results in a simple definition, while otherwise the lambda is
+	called immediately (like in a thread statement)
+------------------
+	h a b c
+	v: callback {
+		func a -> b
+			b: a + 1
+			return
+		}, 7
+
+New thread:
+-----------
+	thread < function call >
+
+

@@ -1,9 +1,0 @@
-
-h: func x, y, byte c -> z, r
-	z = x y + c /
-	r = x y + c %
-
-main:
-	b := 5 254 +
-	b, _ = (b 10 c h)
-
