@@ -8,15 +8,39 @@ System calls:
 Filesystems:
 ------------
 	Virtual filesystem layer exposes only data, no metadata.  Every file is
-	just a stream of bits, with an inherent length.  Metadata must be stored in
-	another file using a data serialization format, a la camlistore.  Internal
-	record-keeping metadata (e.g. inodes in UNIX-style filesystems) are not
-	visible to the user through the VFS; finding and keeping track of files
-	must instead be done using a hash of the file contents.
+	just a stream of bits, with an inherent length.  No filenames or directory
+	structure are inherent to a file.  Metadata must be stored in another file
+	using a data serialization format, a la camlistore.  Internal record-keeping
+	metadata (e.g. inodes in UNIX-style filesystems) are not visible to the user
+	through the VFS; finding and keeping track of files must instead be done
+	using a hash of the file contents.
 
 	Some special filesystems include a ramfs and a cachefs.  The ramfs ensures
 	files never touch a backing store, while the cachefs keeps files in an LRU
 	and frees up space when there is pressure to do so.
 
 	Filesystems must carry some well-defined guarantee on consistency.
+
+Processes:
+----------
+	A process is an instance of a program binary. Processes serve only to act on
+	files.
+	
+	Mandatory access control is implemented for each process: each process has a
+	set of visible files, and child processes have their set of files chosen by
+	their parent.  Directory structure is malleable for each process at
+	loadtime.  The requested files and their structure are generally specified
+	in a well-defined format in the program binary.
+
+	Processes have a private, copy-on-write map of their program binary,
+	meaning if a parent process edits the program binary of any running
+	process(es) it does not affect any program instance.  The parent
+	determines what backing store is used for the CoW instance (must be the
+	same or higher tier of storage).
+
+	Processes aim to survive reboots (i.e. have their private CoW binary copy
+	on a persistent backing store), with ephemeral resources stored on temporary
+	filesystems to signify that processes should always check their
+	condition before use.
+
 
