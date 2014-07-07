@@ -32,7 +32,7 @@ Processes:
 	determines what backing store is used for the CoW instance (must be the
 	same or higher tier of storage).
 
-	Processes aim to survive reboots (i.e. have their private CoW binary copy
+	Processes aim to survive reboots (i.e. have their private COW binary copy
 	on a persistent backing store), with ephemeral resources stored on temporary
 	filesystems to signify that processes should always check their
 	condition before use.
@@ -49,5 +49,17 @@ System calls:
 	I/O calls take as parameters the hash of the file in question, the address
 	of the string to be read or written, the length of said string, and the
 	address they are to be read or written into.  Optional parameters can
-	specify the blocking behaviour of the call.
+	specify the blocking behaviour of the call.  For writes, the call returns
+	the new file hash.
+
+IPC:
+----
+	A system file can be used to turn a shared file into a buffer/pipe, where
+	one process is the reader and some other(s) is/are the writer.  A reader
+	reads the file starting at address 0, for a certain buffer length, and the
+	call blocks until the writer(s) have filled up that many bytes in the
+	buffer.  Writers also just arbitrarily write to address 0---the system
+	determines the actual address placement for multiple writes in a row.  As
+	soon as the buffer length requested by the reader is filled, the call
+	returns on the reader and the next call on the writer blocks.
 
