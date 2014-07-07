@@ -52,8 +52,8 @@ System calls:
 	specify the blocking behaviour of the call.  For writes, the call returns
 	the new file hash.
 
-IPC:
-----
+IPC/sockets:
+------------
 	A system file can be used to turn a shared file into a buffer/pipe, where
 	one process is the reader and some other(s) is/are the writer.  A reader
 	reads the file starting at address 0, for a certain buffer length, and the
@@ -62,4 +62,12 @@ IPC:
 	determines the actual address placement for multiple writes in a row.  As
 	soon as the buffer length requested by the reader is filled, the call
 	returns on the reader and the next call on the writer blocks.
+
+Modules/drivers:
+----------------
+	Almost everything is userspace.  Binaries for hardware drivers are
+	selected by the kernel and get special file mappings that represent ranges
+	of DMA addresses.  Filesystem drivers get mapped an applicable portion of
+	the pagecache.  Network drivers get mapped sockets that represent input or
+	output bitstreams.
 
