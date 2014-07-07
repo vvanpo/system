@@ -1,10 +1,4 @@
 
-System calls:
--------------
-	Only file-handling calls: read and write.
-	Extra system functions are available via file manipulations within a
-	pseudo-filesystem.
-
 Filesystems:
 ------------
 	Virtual filesystem layer exposes only data, no metadata.  Every file is
@@ -43,4 +37,17 @@ Processes:
 	filesystems to signify that processes should always check their
 	condition before use.
 
+System calls:
+-------------
+	Only file-handling calls: read and write.
+
+	Extra system functions are available via file manipulations within a
+	pseudo-filesystem.  This way a parent process can easily restrict a child
+	process to a set of system functions, by only giving it visibility to
+	specific system files.
+
+	I/O calls take as parameters the hash of the file in question, the address
+	of the string to be read or written, the length of said string, and the
+	address they are to be read or written into.  Optional parameters can
+	specify the blocking behaviour of the call.
 
