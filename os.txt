@@ -1,0 +1,22 @@
+
+System calls:
+-------------
+	Only file-handling calls: read and write.
+	Extra system functions are available via file manipulations within a
+	pseudo-filesystem.
+
+Filesystems:
+------------
+	Virtual filesystem layer exposes only data, no metadata.  Every file is
+	just a stream of bits, with an inherent length.  Metadata must be stored in
+	another file using a data serialization format, a la camlistore.  Internal
+	record-keeping metadata (e.g. inodes in UNIX-style filesystems) are not
+	visible to the user through the VFS; finding and keeping track of files
+	must instead be done using a hash of the file contents.
+
+	Some special filesystems include a ramfs and a cachefs.  The ramfs ensures
+	files never touch a backing store, while the cachefs keeps files in an LRU
+	and frees up space when there is pressure to do so.
+
+	Filesystems must carry some well-defined guarantee on consistency.
+
