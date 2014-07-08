@@ -6,10 +6,22 @@ Filesystems:
 	The virtual filesystem layer exposes only data, no metadata.  Every file is
 	just a stream of bytes, with an inherent length.  No filenames or directory
 	structure are inherent to a file.  Metadata must be stored in another file
-	using a data serialization format, a la camlistore.  Internal record-keeping
-	metadata (e.g. inodes in UNIX-style filesystems) are not visible to the user
-	through the VFS; finding and keeping track of files must instead be done
-	using a hash of the file contents.
+	using a data serialization format.  Internal record-keeping metadata (e.g.
+	inodes in UNIX-style filesystems) are not visible to the user through the
+	VFS; instead the data is structured using a schema inspired by camlistore:
+		- Data is stored in blobs, and a file can be the concatenation of
+		  several blobs.
+		- A static file is reference by a permanode, which is an immutable,
+		  signed block containing a UUID.
+		- The content referenced by the permanode is determined by attribute
+		  blobs referencing the permanode, and specifying the hash of blobs that
+		  make up the content.
+	Filesystems employ reference-counting to clean up any blobs that are no
+	longer accessible.  Filesystem drivers are just blob servers, while the
+	file server portion is implemented generically by the VFS.  Blob servers
+	keep track of and verify blob hashes, as well as the reference count passed
+	to them by the file server.  The file server is built into the kernel and is
+	responsible for verifying consistency of files.
 
 	Directories are arbitrary methods of organization, and not useful to the
 	majority of applications.  A shell can instead add metadata to a user's
@@ -21,9 +33,6 @@ Filesystems:
 	be a tmpfs.
 
 	Filesystems must carry some well-defined guarantee on consistency.
-
-	Filesystems employ reference-counting to clean up any files that are no
-	longer accessible.
 
 Processes:
 ----------
@@ -60,8 +69,7 @@ System calls:
 	I/O calls take as parameters the hash of the file in question, the address
 	of the string to be read or written, the length of said string, and the
 	address they are to be read or written into.  Optional parameters can
-	specify the blocking behaviour of the call.  For writes, the call returns
-	the new file hash.
+	specify the blocking behaviour of the call.
 
 IPC/sockets:
 ------------
@@ -86,5 +94,7 @@ Character set:
 --------------
 	ASCII/Unicode has some annoyances, in particular its messy mingling of
 	control codes with printable characters.  I would prefer a single control
-	escape code, with a separate mapping table of control codes.
+	escape code, with a separate mapping table of control codes, and less
+	ambiguity in said codes (no 8 bazillion codes for whitespace, each with
+	idiosyncratic implementation).
 
