@@ -1,4 +1,47 @@
 
+Definitions:
+------------
+	- Driver:
+		A driver is a module that directs (via output) and interprets (via
+		input) an external device or resource.  A module that only interprets
+		and translates input from a device is not a driver.
+		e.g.:
+			- VGA driver
+			- USB driver
+			- SATA driver
+	- Module:
+		A module is a program that has a distinct purpose, a distinct interface,
+		and does not accept input that is not consistent with its interface.
+		Modules are often small and statically-linked, and have clearly-defined
+		dependencies.
+	- Block driver:
+		A block driver is a device driver that exposes a file of fixed length,
+		and can be written to and read from.  Many backing stores are exposed
+		via block drivers.
+		e.g. SATA driver
+	- Blob server:
+		A blob server is a module that deduplicates and tracks stored data,
+		and serves the data as "blobs" of bytes, along with the hash of that
+		blob and its length in bytes.  A blob server can take and store its
+		data potentially across multiple block files.  Blobs are reference-
+		counted, with input from the file server.  They are garbage collected
+		when convenient.
+	- File server:
+		A file server is a module that sits on top a blob server and handles
+		blob metadata by organizing blobs into files using permanodes.
+		Permanodes are immutable blobs that have a unique id representing a
+		file.  A mutable blob referencing a permanode specifies which blob
+		hashes make up the content of said permanode.
+		Applications have the choice to skip calls to the file server, and
+		instead interface with the blob server directly.
+	- Page-cache:
+		The page-cache is a kernel structure of pages cached in memory,
+		referenced by blobs.  Different backing stores have different policies
+		for syncing and flushing the cache; a block driver will likely flush its
+		portion of the cache often.  Blob-size and page-size don't necessarily
+		equate, so multiple blobs can reference a page and provide page
+		deduplication---even if they exist on different backing stores.
+
 Filesystems:
 ------------
 	Filesystems are not hierarchical.
