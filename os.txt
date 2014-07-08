@@ -1,35 +1,46 @@
 
 Filesystems:
 ------------
-	Virtual filesystem layer exposes only data, no metadata.  Every file is
-	just a stream of bits, with an inherent length.  No filenames or directory
+	Filesystems are not hierarchical.
+
+	The virtual filesystem layer exposes only data, no metadata.  Every file is
+	just a stream of bytes, with an inherent length.  No filenames or directory
 	structure are inherent to a file.  Metadata must be stored in another file
 	using a data serialization format, a la camlistore.  Internal record-keeping
 	metadata (e.g. inodes in UNIX-style filesystems) are not visible to the user
 	through the VFS; finding and keeping track of files must instead be done
 	using a hash of the file contents.
 
-	Some special filesystems include a ramfs and a cachefs.  The ramfs ensures
+	Directories are arbitrary methods of organization, and not useful to the
+	majority of applications.  A shell can instead add metadata to a user's
+	files to organize and expose them to the user in any fashion they like.
+
+	Some special filesystems include a tmpfs and a cachefs.  The tmpfs ensures
 	files never touch a backing store, while the cachefs keeps files in an LRU
-	and frees up space when there is pressure to do so.
+	and frees up space when there is pressure to do so.  A cachefs could also
+	be a tmpfs.
 
 	Filesystems must carry some well-defined guarantee on consistency.
+
+	Filesystems employ reference-counting to clean up any files that are no
+	longer accessible.
 
 Processes:
 ----------
 	A process is an instance of a program binary. Processes serve only to act on
 	files.
-	
+
 	Mandatory access control is implemented for each process: each process has a
 	set of visible files, and child processes have their set of files chosen by
-	their parent.  Directory structure is malleable for each process at
-	loadtime.  The requested files and their structure are generally specified
-	in a well-defined format in the program binary.
+	their parent.  Metadata files exposed to the child process (which could
+	determine things like directory structure) could be different than those
+	used by the parent.  The requested files and their structure are generally
+	specified in a well-defined format in the program binary.
 
 	Processes have a private, copy-on-write map of their program binary,
 	meaning if a parent process edits the program binary of any running
 	process(es) it does not affect any program instance.  The parent
-	determines what backing store is used for the CoW instance (must be the
+	determines what backing store is used for the COW instance (must be the
 	same or higher tier of storage).
 
 	Processes aim to survive reboots (i.e. have their private COW binary copy
@@ -70,4 +81,10 @@ Modules/drivers:
 	of DMA addresses.  Filesystem drivers get mapped an applicable portion of
 	the pagecache.  Network drivers get mapped sockets that represent input or
 	output bitstreams.
+
+Character set:
+--------------
+	ASCII/Unicode has some annoyances, in particular its messy mingling of
+	control codes with printable characters.  I would prefer a single control
+	escape code, with a separate mapping table of control codes.
 
