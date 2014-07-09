@@ -42,40 +42,24 @@ Definitions:
 		equate, so multiple blobs can reference a page and provide page
 		deduplication---even if they exist on different backing stores.
 
-Filesystems:
-------------
-	Filesystems are not hierarchical.
+Files:
+------
+	Although a hierarchical filesystem could be implemented on top the file
+	server, no system software is dependent on it.
 
-	The virtual filesystem layer exposes only data, no metadata.  Every file is
-	just a stream of bytes, with an inherent length.  No filenames or directory
-	structure are inherent to a file.  Metadata must be stored in another file
-	using a data serialization format.  Internal record-keeping metadata (e.g.
-	inodes in UNIX-style filesystems) are not visible to the user through the
-	VFS; instead the data is structured using a schema inspired by camlistore:
-		- Data is stored in blobs, and a file can be the concatenation of
-		  several blobs.
-		- A static file is reference by a permanode, which is an immutable,
-		  signed block containing a UUID.
-		- The content referenced by the permanode is determined by attribute
-		  blobs referencing the permanode, and specifying the hash of blobs that
-		  make up the content.
-	Filesystems employ reference-counting to clean up any blobs that are no
-	longer accessible.  Filesystem drivers are just blob servers, while the
-	file server portion is implemented generically by the VFS.  Blob servers
-	keep track of and verify blob hashes, as well as the reference count passed
-	to them by the file server.  The file server is built into the kernel and is
-	responsible for verifying consistency of files.
+	The blob server exposes only data, no metadata.  Blobs are addressed by a
+	hash of the blob contents.  Metadata must be stored in another blob using a
+	data serialization format.  Internal record-keeping metadata (e.g. inodes
+	in UNIX-style filesystems) are not visible to the user.
 
-	Directories are arbitrary methods of organization, and not useful to the
-	majority of applications.  A shell can instead add metadata to a user's
-	files to organize and expose them to the user in any fashion they like.
+	A file can be the concatenation of several blobs.
 
-	Some special filesystems include a tmpfs and a cachefs.  The tmpfs ensures
+	Some special file servers include a tmpfs and a cachefs.  The tmpfs ensures
 	files never touch a backing store, while the cachefs keeps files in an LRU
 	and frees up space when there is pressure to do so.  A cachefs could also
 	be a tmpfs.
 
-	Filesystems must carry some well-defined guarantee on consistency.
+	Blob and file servers must carry some well-defined guarantee on consistency.
 
 Processes:
 ----------
@@ -131,7 +115,7 @@ Modules/drivers:
 	selected by the kernel and get special file mappings that represent ranges
 	of DMA addresses.  Filesystem drivers get mapped an applicable portion of
 	the pagecache.  Network drivers get mapped sockets that represent input or
-	output bitstreams.
+	output bytestreams.
 
 Character set:
 --------------
@@ -139,5 +123,5 @@ Character set:
 	control codes with printable characters.  I would prefer a single control
 	escape code, with a separate mapping table of control codes, and less
 	ambiguity in said codes (no 8 bazillion codes for whitespace, each with
-	idiosyncratic implementation).
+	idiosyncratic effects).
 
