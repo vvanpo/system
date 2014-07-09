@@ -75,14 +75,15 @@ Processes:
 
 	Processes have a private, copy-on-write map of their program binary,
 	meaning if a parent process edits the program binary of any running
-	process(es) it does not affect any program instance.  The parent
-	determines what backing store is used for the COW instance (must be the
-	same or higher tier of storage).
+	process(es) it does not affect any program instance.
 
 	Processes aim to survive reboots (i.e. have their private COW binary copy
 	on a persistent backing store), with ephemeral resources stored on temporary
 	filesystems to signify that processes should always check their
 	condition before use.
+
+Process trees & init-system:
+----------------------------
 
 System calls:
 -------------
@@ -100,28 +101,17 @@ System calls:
 
 IPC/sockets:
 ------------
-	A system file can be used to turn a shared file into a buffer/pipe, where
-	one process is the reader and some other(s) is/are the writer.  A reader
-	reads the file starting at address 0, for a certain buffer length, and the
-	call blocks until the writer(s) have filled up that many bytes in the
-	buffer.  Writers also just arbitrarily write to address 0---the system
-	determines the actual address placement for multiple writes in a row.  As
-	soon as the buffer length requested by the reader is filled, the call
-	returns on the reader and the next call on the writer blocks.
 
-Modules/drivers:
-----------------
-	Almost everything is userspace.  Binaries for hardware drivers are
-	selected by the kernel and get special file mappings that represent ranges
-	of DMA addresses.  Filesystem drivers get mapped an applicable portion of
-	the pagecache.  Network drivers get mapped sockets that represent input or
-	output bytestreams.
+Drivers:
+--------
+	Binaries for hardware drivers are selected by the kernel and get special
+	file mappings that represent ranges of DMA addresses.
 
 Character set:
 --------------
-	ASCII/Unicode has some annoyances, in particular its messy mingling of
+	ASCII/Unicode has some annoyances, in particular the messy mingling of
 	control codes with printable characters.  I would prefer a single control
 	escape code, with a separate mapping table of control codes, and less
 	ambiguity in said codes (no 8 bazillion codes for whitespace, each with
-	idiosyncratic effects).
+	idiosyncratic and unsemantic effects).
 
