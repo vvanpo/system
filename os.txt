@@ -52,19 +52,12 @@ Files:
 
 Processes:
 ----------
-	A process is an instance of a program binary. Processes serve only to act on
-	files.
+	A process is a snapshot of a program binary, mapped into a virtual address
+	space. Processes serve only to act on files.
 
-	Mandatory access control is implemented for each process: each process has a
+	Mandatory access control is implemented for each process: processes have a
 	set of visible files, and child processes have their set of files chosen by
-	their parent.  Metadata files exposed to the child process (which could
-	determine things like directory structure) could be different than those
-	used by the parent.  The requested files and their structure are generally
-	specified in a well-defined format in the program binary.
-
-	Processes have a private, copy-on-write map of their program binary,
-	meaning if a parent process edits the program binary of any running
-	process(es) it does not affect any program instance.
+	their parent.
 
 	Processes aim to survive reboots (i.e. have their private COW binary copy
 	on a persistent backing store), with ephemeral resources stored on temporary
