@@ -23,43 +23,32 @@ Definitions:
 		A blob server is a module that deduplicates and tracks stored data,
 		and serves the data as "blobs" of bytes, along with the hash of that
 		blob and its length in bytes.  A blob server can take and store its
-		data potentially across multiple block files.  Blobs are reference-
-		counted, with input from the file server.  They are garbage collected
-		when convenient.
+		data potentially across multiple block files.
 	- File server:
-		A file server is a module that sits on top a blob server and handles
-		blob metadata by organizing blobs into files using permanodes.
-		Permanodes are immutable blobs that have a unique id representing a
-		file.  A mutable blob referencing a permanode specifies which blob
-		hashes make up the content of said permanode.
-		Applications have the choice to skip calls to the file server, and
-		instead interface with the blob server directly.
+		A file server is a module that sits atop a blob server and handles
+		blob metadata by organizing blobs into files.  The file server counts
+		references to blobs and garbage collects any unreferenced blobs.
+		File servers also handle block and character files.
 	- Page-cache:
-		The page-cache is a kernel structure of pages cached in memory,
-		referenced by blobs.  Different backing stores have different policies
-		for syncing and flushing the cache; a block driver will likely flush its
-		portion of the cache often.  Blob-size and page-size don't necessarily
-		equate, so multiple blobs can reference a page and provide page
-		deduplication---even if they exist on different backing stores.
+		The page-cache is a kernel structure of pages cached in memory.
+		Different backing stores have different policies for syncing and
+		flushing the cache; a block driver will likely flush its portion of the
+		cache often.
 
 Files:
 ------
-	Although a hierarchical filesystem could be implemented on top the file
+	Although a hierarchical filesystem could be implemented atop the file
 	server, no system software is dependent on it.
 
-	The blob server exposes only data, no metadata.  Blobs are addressed by a
-	hash of the blob contents.  Metadata must be stored in another blob using a
-	data serialization format.  Internal record-keeping metadata (e.g. inodes
-	in UNIX-style filesystems) are not visible to the user.
-
-	A file can be the concatenation of several blobs.
+	Files are exposed to the user as a unique id, with no other metadata.
+	Attributes can optionally extend a file, via calls to the file server.
 
 	Some special file servers include a tmpfs and a cachefs.  The tmpfs ensures
-	files never touch a backing store, while the cachefs keeps files in an LRU
-	and frees up space when there is pressure to do so.  A cachefs could also
-	be a tmpfs.
+	files never touch a persistent backing store, while the cachefs keeps files
+	in an LRU and frees up space when there is pressure to do so.  A cachefs
+	could also be a tmpfs.
 
-	Blob and file servers must carry some well-defined guarantee on consistency.
+	File servers must carry some well-defined guarantee on consistency.
 
 Processes:
 ----------
