@@ -62,15 +62,17 @@ Bytecode compiler:
         - Bytecode operates on multiple fictional address spaces, as segments.
           Such segments allow the programmer to let the native compiler worry
           about page-alignment and space constraints.  Each thread stack gets
-          their own 64-bit address space. The heap is overlaid on all stack
-          segments, meaning no special segment-referencing needs to take place
-          to access the heap.  Each stack is simply initialized to begin at
-          address ~0, and the heap always begins at address 0.
-        - Statements are stored on the heap, but their native-code length is
-          dependent on the underlying architecture.  The bytecode length of the
-          statement definitions is used instead to calculate address references
-          into statements, and the native compiler takes care of offsetting the
-          addresses to match their real length.
+          their own 64-bit address space.
+        - Segments are also generally made for each major data-structure. This
+          prevents the programmer from having to worry about allocation needs to
+          for large structures that could potentially be extended significantly.
+          Segments get resolved into one address space at compile time, and
+          sufficient allocation is handled by the compiler.
+        - Statements are stored in a code segment, but their native-code length
+          is dependent on the underlying architecture.  The bytecode length of
+          the statement definitions is used instead to calculate address
+          references into statements, and the native compiler takes care of
+          offsetting the addresses to match their real length.
     - Stack address references are limited to the owning stack segment, and
       globals.  Initializing a new thread hence breaks lexical
       scoping---variables must be passed as parameters to the new stack.

@@ -50,6 +50,10 @@ Files:
 
 	File servers must carry some well-defined guarantee on consistency.
 
+File cache:
+-----------
+	
+
 Processes:
 ----------
 	A process is a snapshot of a program binary, mapped into a virtual address
@@ -66,6 +70,14 @@ Processes:
 
 Process trees & init-system:
 ----------------------------
+
+Process loader:
+---------------
+	The binary format specifies addresses relative to segments, and the start
+	addresses of each segment are chosen by the loader.  The segments are
+	addressed directly in the system language as well, to ease the programming
+	of multiple threads/stacks, and prevent the need for knowledge of the
+	system's page size.
 
 System calls:
 -------------
