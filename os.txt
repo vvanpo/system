@@ -109,3 +109,28 @@ Character set:
 	ambiguity in said codes (no 8 bazillion codes for whitespace, each with
 	idiosyncratic and unsemantic effects).
 
+	One option for a character set would simply be the set of all printable
+	characters in the unicode spec, with the only whitespace being newline and
+	space.  Terminals could use newline (perhaps being code point 0) as an
+	escape code, and shells and editors could escape newline inputs.
+	The other option is to build control codes into the character set by
+	defining code point 0 as an escape code.  In either case, the set of all
+	defined code points 1 and up can be mapped to a typeface.
+
+	I prefer the first option because it simplifies stored text and the
+	options are essentially the same anyway.  Formatted text could be easily
+	read by raw text editors, and easily converted to raw text by removing
+	escape codes.
+
+	Formatted text could be written in a raw editor by having every escape
+	code on its own line, or alternatively using the '\' character as a
+	delimiter.
+	e.g. "This is an example of \2\formatted text\2\:\0\\1\In this example,
+		escape code 1 is a tab, and escape code 2 delimits bold text.  The \\
+		character is used to delimit escape codes in a quoted string, but such
+		a string needs to be processed to raw text first, by replacing every
+		presence of '\\<num>\\' with '<newline><num>'."
+	To ease writing formatted text in a raw editor, shortcuts like \0,1\ could
+	be made to concatenate escape codes.
+
+
