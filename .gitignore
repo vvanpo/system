@@ -1,4 +1,5 @@
 .*.swp
+*.pyc
 
 lang/lang
 lang/bytelang/bytelang

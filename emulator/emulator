@@ -1,0 +1,14 @@
+#!/bin/env python3
+
+"""
+Emulator
+"""
+
+import machine, kernel
+
+def main():
+	m = machine.machine(256*1024)
+	k = kernel.kernel(m)
+
+if __name__ == "__main__":
+	main()
