@@ -215,3 +215,14 @@ Address translation:
 	  appended using segment operators.  This is useful for files that get
 	  mapped into new segments, and requiring segment operators to extend or 
 	  shrink segments allows the compiler to ensure no overflows occur.
+
+Error handling:
+---------------
+	- Functions have a tree of all possible inputs and outputs, with
+	  allowable conditions assigned to each.
+	- The compiler implements runtime checks on ranges when needed.  This can
+	  be avoided when the caller of a function has output ranges that match
+	  the input ranges of the function, for example.
+	- When conditions fail for a dynamic input, the tree of conditions
+	  contains a pointer to an error recovery function.
+

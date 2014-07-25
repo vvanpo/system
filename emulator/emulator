@@ -4,11 +4,12 @@
 Emulator
 """
 
-import machine, kernel
+import kernel
+
+init = ""
 
 def main():
-	m = machine.machine(256*1024)
-	k = kernel.kernel(m)
+	k = kernel.kernel(init)
 
 if __name__ == "__main__":
 	main()
