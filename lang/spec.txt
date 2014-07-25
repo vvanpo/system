@@ -52,27 +52,6 @@ Bytecode compiler:
       required for architectures that don't allow use of the full address
       space (e.g. x86-64 non-canonical addresses) or operating systems that
       prohibit use of specific memory regions (e.g. Windows NT).
-        - Translation allows for a portable, consistent representation of the
-          call stack across all architectures, with the native compiler
-          optimizing out the details.
-        - A compiler pragma could allow for a real address to pass through
-          bytecode-to-native compilation, in the special case where systems code
-          (drivers, kernel code, etc.) needs to access a special memory
-          location.
-        - Bytecode operates on multiple fictional address spaces, as segments.
-          Such segments allow the programmer to let the native compiler worry
-          about page-alignment and space constraints.  Each thread stack gets
-          their own 64-bit address space.
-        - Segments are also generally made for each major data-structure. This
-          prevents the programmer from having to worry about allocation needs to
-          for large structures that could potentially be extended significantly.
-          Segments get resolved into one address space at compile time, and
-          sufficient allocation is handled by the compiler.
-        - Statements are stored in a code segment, but their native-code length
-          is dependent on the underlying architecture.  The bytecode length of
-          the statement definitions is used instead to calculate address
-          references into statements, and the native compiler takes care of
-          offsetting the addresses to match their real length.
     - Stack address references are limited to the owning stack segment, and
       globals.  Initializing a new thread hence breaks lexical
       scoping---variables must be passed as parameters to the new stack.
@@ -219,3 +198,20 @@ Standard library:
       to allow for multiprocessing, shared libraries/dynamic linking, etc.  Such
       a kernel could even be extended to implement a hypervisor or full
       operating system.
+
+Address translation:
+--------------------
+	- Translation allows for a portable, consistent representation of the
+	  call stack across all architectures, with the native compiler
+	  optimizing out the details.
+	- A compiler pragma could allow for a real address to pass through
+	  bytecode-to-native compilation, in the special case where systems code
+	  (drivers, kernel code, etc.) needs to access a special memory
+	  location.
+	- Bytecode operates on multiple fictional address spaces, as segments.
+	  Such segments allow the programmer to let the native compiler worry
+	  about page-alignment and space constraints.
+	- Segments are represented as a list of bytes that can be prepended or
+	  appended using segment operators.  This is useful for files that get
+	  mapped into new segments, and requiring segment operators to extend or 
+	  shrink segments allows the compiler to ensure no overflows occur.
