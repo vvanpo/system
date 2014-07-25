@@ -19,41 +19,6 @@ Definitions:
 		and can be written to and read from.  Many backing stores are exposed
 		via block drivers.
 		e.g. SATA driver
-/*
-	- Blob server:
-		A blob server is a module that deduplicates and tracks stored data,
-		and serves the data as "blobs" of bytes, along with the hash of that
-		blob and its length in bytes.  A blob server can take and store its
-		data potentially across multiple block files.
-	- File server:
-		A file server is a module that sits atop a blob server and handles
-		blob metadata by organizing blobs into files.  The file server counts
-		references to blobs and garbage collects any unreferenced blobs.
-		File servers also handle block and character files.
-	- Page-cache:
-		The page-cache is a kernel structure of pages cached in memory.
-		Different backing stores have different policies for syncing and
-		flushing the cache; a block driver will likely flush its portion of the
-		cache often.
-
-Files:
-------
-	Although a hierarchical filesystem could be implemented atop the file
-	server, no system software is dependent on it.
-
-	Files are exposed to the user as a unique id, with no other metadata.
-	Attributes can optionally extend a file, via calls to the file server.
-
-	Some special file servers include a tmpfs and a cachefs.  The tmpfs ensures
-	files never touch a persistent backing store, while the cachefs keeps files
-	in an LRU and frees up space when there is pressure to do so.  A cachefs
-	could also be a tmpfs.
-
-	File servers must carry some well-defined guarantee on consistency.
-
-File cache:
------------
-	
 
 Processes:
 ----------
@@ -79,21 +44,6 @@ Process loader:
 	addressed directly in the system language as well, to ease the programming
 	of multiple threads/stacks, and prevent the need for knowledge of the
 	system's page size.
-
-System calls:
--------------
-	Only file-handling calls: read and write.
-
-	Extra system functions are available via file manipulations within a
-	pseudo-filesystem.  This way a parent process can easily restrict a child
-	process to a set of system functions, by only giving it visibility to
-	specific system files.
-
-	I/O calls take as parameters the hash of the file in question, the address
-	of the string to be read or written, the length of said string, and the
-	address they are to be read or written into.  Optional parameters can
-	specify the blocking behaviour of the call.
-*/
 
 Drivers:
 --------
@@ -135,4 +85,23 @@ Character set:
 Cache:
 ------
 	A write-back cache of all data used and stored by the system.  The
-	filesystem determines how pages in the cache get written 
+	filesystem determines how pages in the cache get written to the backing
+	store.
+
+Streams & Files:
+----------------
+	Files are conceptualized by a process as a mutable list of bytes.  Every
+	file opened by a process gets its own segment; any writes to that segment
+	result in writes to the file.
+	As mutable lists, files can be prepended or appended, new slices can be
+	inserted into the file, or slices can be overwritten.
+	Hence, files can act as queues (pipes) or stacks.
+	Files have no metadata, other than a uniquely identifying number that does
+	not change for the life of the file.
+
+System call:
+------------
+	The system call available to processes is the 'open' call, which takes a
+	file's unique id as its argument, and returns a new segment with the file's
+	contents.
+
