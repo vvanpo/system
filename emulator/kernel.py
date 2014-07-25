@@ -1,8 +1,8 @@
 
-import pyparsing as parse
+import asmlang
 
 class fd(list):				# file descriptor
-	def __init__(self, uuid)
+	def __init__(self, uuid):
 		self.uuid = uuid
 		list.__init__(self)
 
@@ -13,7 +13,7 @@ class kernel(object):
 	def _exec(self, code):
 		p = process(code)
 		self.process.add(p)
-	def open(self, uuid):
+	def open(self, uuid=None):
 		for f in self.fd:
 			if f.uuid == uuid:
 				return f
@@ -23,9 +23,7 @@ class kernel(object):
 
 class process(object):
 	def __init__(self, code):
-		def parse_code(c):
-			pass
-		self.instruction = parse_code(code)
+		self.instruction = asmlang.list_instructions(code)
 		self.instr_pointer = 0
 	def next(self):
 		self.instr_pointer += 1
