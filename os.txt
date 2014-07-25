@@ -19,6 +19,7 @@ Definitions:
 		and can be written to and read from.  Many backing stores are exposed
 		via block drivers.
 		e.g. SATA driver
+/*
 	- Blob server:
 		A blob server is a module that deduplicates and tracks stored data,
 		and serves the data as "blobs" of bytes, along with the hash of that
@@ -92,9 +93,7 @@ System calls:
 	of the string to be read or written, the length of said string, and the
 	address they are to be read or written into.  Optional parameters can
 	specify the blocking behaviour of the call.
-
-IPC/sockets:
-------------
+*/
 
 Drivers:
 --------
@@ -133,4 +132,7 @@ Character set:
 	To ease writing formatted text in a raw editor, shortcuts like \0,1\ could
 	be made to concatenate escape codes.
 
-
+Cache:
+------
+	A write-back cache of all data used and stored by the system.  The
+	filesystem determines how pages in the cache get written 
