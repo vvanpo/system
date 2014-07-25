@@ -94,7 +94,9 @@ Streams & Files:
 	file opened by a process gets its own segment; any writes to that segment
 	result in writes to the file.
 	As mutable lists, files can be prepended or appended, new slices can be
-	inserted into the file, or slices can be overwritten.
+	inserted into the file, slices can be removed, or slices can be
+	overwritten.  The length of the segment/file can be queried, and a process
+	can ask to block until a file is a certain length.
 	Hence, files can act as queues (pipes) or stacks.
 	Files have no metadata, other than a uniquely identifying number that does
 	not change for the life of the file.
@@ -104,4 +106,7 @@ System call:
 	The system call available to processes is the 'open' call, which takes a
 	file's unique id as its argument, and returns a new segment with the file's
 	contents.
+	All other system services are available by reading or writing to specific
+	files.  A single metadata file is available per-process, using file id 0,
+	which identifies the available file ids and names.
 
