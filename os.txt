@@ -1,6 +1,11 @@
 
 Definitions:
 ------------
+	- Module:
+		A module is a program that has a distinct purpose, a distinct interface,
+		and does not accept input that is not consistent with its interface.
+		Modules are often small and statically-linked, and have clearly-defined
+		dependencies.
 	- Driver:
 		A driver is a module that directs (via output) and interprets (via
 		input) an external device or resource.  A module that only interprets
@@ -9,11 +14,6 @@ Definitions:
 			- VGA driver
 			- USB driver
 			- SATA driver
-	- Module:
-		A module is a program that has a distinct purpose, a distinct interface,
-		and does not accept input that is not consistent with its interface.
-		Modules are often small and statically-linked, and have clearly-defined
-		dependencies.
 	- Block driver:
 		A block driver is a device driver that exposes a file of fixed length,
 		and can be written to and read from.  Many backing stores are exposed
@@ -22,17 +22,11 @@ Definitions:
 
 Processes:
 ----------
-	A process is a snapshot of a program binary, mapped into a virtual address
-	space. Processes serve only to act on files.
+	Processes serve only to act on files.
 
 	Mandatory access control is implemented for each process: processes have a
 	set of visible files, and child processes have their set of files chosen by
 	their parent.
-
-	Processes aim to survive reboots (i.e. have their private COW binary copy
-	on a persistent backing store), with ephemeral resources stored on temporary
-	filesystems to signify that processes should always check their
-	condition before use.
 
 Process trees & init-system:
 ----------------------------
