@@ -7,9 +7,16 @@ Emulator
 import kernel
 
 init = """
-segment stack
-literal 0
-pop 1 _ip
+open stdout
+push literal 0 -
+push literal a -
+ifzero sub - _ip 4
+	push deref _fp 1 -
+	push literal 1 -
+	copy add - _fp 1
+	pop 2
+	copy literal ffff - stdout:0
+copy ref code:3 _ip
 """
 
 def main():

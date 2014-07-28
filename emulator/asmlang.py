@@ -4,20 +4,25 @@ from pyparsing import *
 def parse(code):
 	name = Word(alphas)
 	number = Word(hexnums)
-	address = name + ":" + number | oneOf("_ip _sp _fp") + Optional(number)
+	offset = number
+	uuid = number
+	address = name + ":" + number | oneOf("_ip _sp _fp") + Optional(offset)
 	length = number | Literal("-")
 	call = "call" + address
-	ref = "ref" + address + length
+	ref = "ref" + address
 	deref = "deref" + address + length
-	literal = "literal" + number
+	literal = "literal" + number + length
 	operation = oneOf("not and or xor shiftl lshiftr ashiftr add sub mult \
-			divfloor exp mod") + length
+			floordiv exp mod") + length
 	expression = call | ref | deref | literal | operation
-	segment = "segment" + name
-	pop = "pop" + Optional(number) + Optional(address)
-	ifstmt = "if" + address
-	statement = segment | pop | ifstmt
-	asmlang = OneOrMore(statement | expression) + stringEnd
+	open = "open" + (name | (Optional(name) + uuid))
+	close = "close" + (name | uuid)
+	push = "push" + expression
+	pop = "pop" + Optional(number) + Optional(address + Optional(length + offset))
+	copy = "copy" + expression + address
+	ifzero = "ifzero" + expression + address
+	statement = open | close | push | pop | copy | ifzero
+	asmlang = OneOrMore(statement) + stringEnd
 
 	instr = []
 	def action(s, loc, toks):

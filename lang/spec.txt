@@ -230,18 +230,29 @@ asmlang grammar:
 ----------------
 
 	name = [a-zA-z]+
-	number = [0-9a-f]+
-	offset = number
-	address = ( name, ":", number ) | (( "_ip" | "_sp" | "_fp" ), [ offset ])
+	number = [0-9a-fA-F]+
+	offset = uuid = number
+	address = ((name | uuid) ":" number) | (("_ip" | "_sp" | "_fp") [offset])
 	length = number | "-"
-	expression = call | reference | dereference | literal | operation
-		call = "call", address
-		reference = "ref", address, length
-		dereference = "deref", address, length
-		literal = "literal", number
-		operation = ( "not" | "and" | "or" | "xor" | ... ), length
-	statement = segment | pop | if
-		segment = "segment", name
-		pop = "pop", [ number ], [ address ]
-		if = "if", address
+	expression = call | ref | deref | literal | operation
+		call = "call" address
+		ref = "ref" address
+		deref = "deref" address length
+		literal = "literal" number length
+		operation = ("not" | "and" | "or" | "xor" | ...) length
+	statement = open | close | push | pop | copy | ifzero
+		open = "open" (name | ([name] uuid))
+		close = "close" (name | uuid)
+		push = "push" expression
+		pop = "pop" [number] [address [length offset]]
+		copy = "copy" expression address
+		ifzero = "ifzero" expression address
+
+	- 'offset' is in granularities of word-size.
+	- When the 'length' argument is a hyphen, it denotes the architecture's
+	  word-size.
+	- A new process has two automatic segments, a stack for the execution of
+	  "main", and a code segment.
+	- Each thread has its own _ip, _sp, and _fp.  Initially, the first thread
+	  of a process has the values _ip = code:0, and _sp = _fp = main:0.
 

@@ -3,16 +3,17 @@ from pyparsing import *
 
 def parse(code):
 	name = Word(alphas)
-	number = Word(nums)
+	number = Word(hexnums)
 	address = name + ":" + number |
 				(("_ip" | "_sp" | "_fp") + number)
+	length = number | Literal("-")
 	call = "call" + address
-	ref = "ref" + address + number
-	deref = "deref" + address + number
+	ref = "ref" + address + length
+	deref = "deref" + address + length
 	literal = "literal" + number
 	operation = ("not" | "and" | "or" | "xor" | "shiftl" | "lshiftr" |
 			"ashiftr" | "add" | "sub" | "mult" | "divfloor" | "exp" | "mod") +
-			number
+			length
 	expression = call | ref | deref | literal | operation
 	segment = "segment" + name
 	function = "function" + OneOrMore(Forward(statement)) + "endfunction"
