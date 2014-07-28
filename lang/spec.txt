@@ -230,18 +230,18 @@ asmlang grammar:
 ----------------
 
 	name = [a-zA-z]+
-	number = [0-9]+
-	offset = length = number
+	number = [0-9a-f]+
+	offset = number
 	address = ( name, ":", number ) | (( "_ip" | "_sp" | "_fp" ), [ offset ])
+	length = number | "-"
 	expression = call | reference | dereference | literal | operation
 		call = "call", address
 		reference = "ref", address, length
 		dereference = "deref", address, length
 		literal = "literal", number
 		operation = ( "not" | "and" | "or" | "xor" | ... ), length
-	statement = segment | function | pop | if
+	statement = segment | pop | if
 		segment = "segment", name
-		function = "function", statement+
-		pop = "pop", [ length ], [ address ]
+		pop = "pop", [ number ], [ address ]
 		if = "if", address
 

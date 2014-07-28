@@ -6,7 +6,11 @@ Emulator
 
 import kernel
 
-init = ""
+init = """
+segment stack
+literal 0
+pop 1 _ip
+"""
 
 def main():
 	k = kernel.kernel(init)
