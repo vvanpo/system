@@ -6,7 +6,7 @@ def parse(code):
 	number = Word(hexnums)
 	offset = number
 	uuid = number
-	address = name + ":" + number | oneOf("_ip _sp _fp") + Optional(offset)
+	address = (name + ":" + number) | (oneOf("_ip _sp _fp") + Optional(offset))
 	length = number | Literal("-")
 	call = "call" + address
 	ref = "ref" + address
@@ -21,8 +21,8 @@ def parse(code):
 	pop = "pop" + Optional(number) + Optional(address + Optional(length + offset))
 	copy = "copy" + expression + address
 	ifzero = "ifzero" + expression + address
-	statement = open | close | push | pop | copy | ifzero
-	asmlang = OneOrMore(statement) + stringEnd
+	statement = (open | close | push | pop | copy | ifzero) + lineEnd.suppress()
+	asmlang = OneOrMore(statement.setDebug()) + stringEnd
 
 	instr = []
 	def action(s, loc, toks):

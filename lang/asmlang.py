@@ -4,25 +4,30 @@ from pyparsing import *
 def parse(code):
 	name = Word(alphas)
 	number = Word(hexnums)
-	address = name + ":" + number |
-				(("_ip" | "_sp" | "_fp") + number)
+	offset = number
+	uuid = number
+	address = (name + ":" + number) | (oneOf("_ip _sp _fp") + Optional(offset))
 	length = number | Literal("-")
 	call = "call" + address
-	ref = "ref" + address + length
+	ref = "ref" + address
 	deref = "deref" + address + length
-	literal = "literal" + number
-	operation = ("not" | "and" | "or" | "xor" | "shiftl" | "lshiftr" |
-			"ashiftr" | "add" | "sub" | "mult" | "divfloor" | "exp" | "mod") +
-			length
+	literal = "literal" + number + length
+	operation = oneOf("not and or xor shiftl lshiftr ashiftr add sub mult \
+			floordiv exp mod") + length
 	expression = call | ref | deref | literal | operation
-	segment = "segment" + name
-	function = "function" + OneOrMore(Forward(statement)) + "endfunction"
-	pop = "pop" + Optional(number) + Optional(address)
-	statement << (segment | function | pop | ifstmt)
+	open = "open" + (name | (Optional(name) + uuid))
+	close = "close" + (name | uuid)
+	push = "push" + expression
+	pop = "pop" + Optional(number) + Optional(address + Optional(length + offset))
+	copy = "copy" + expression + address
+	ifzero = "ifzero" + expression + address
+	statement = (open | close | push | pop | copy | ifzero) + lineEnd.suppress()
+	asmlang = OneOrMore(statement.setDebug()) + stringEnd
 
-	return statement.parseString(code)
-
-def list_instructions(code):
-	p = parse(code)
-	print(p)
-
+	instr = []
+	def action(s, loc, toks):
+		instr.append(toks.asList())
+	expression.setParseAction(action)
+	statement.setParseAction(action)
+	asmlang.parseString(code)
+	return instr

@@ -1,23 +1,26 @@
 
-import asmlang, functools
+import asmlang, functools, re
+from uuid import uuid1
 
 class fd(bytearray):			# file descriptor
 	def __init__(self, uuid):
 		super().__init__(self)
 		self.uuid = uuid
+	def __hash__(self):
+		return self.uuid
 
 class kernel(object):
 	def __init__(self, init_process):
-		self.fd = set(fd(1))	# set of files, 1 is stdout
+		self.fd = {fd(1)}		# set of files, 1 is stdout
 		self.process = set()	# set of processes
-		self._exec_proc(init_process)
+		self._sched_proc(init_process)
 		self._start()
 	def _exec_instr(self, proc, instr):
 		stmt = instr.pop(0)
 		if stmt == "open":
-			pass
+			self._open(proc, instr)
 		if stmt == "close":
-			pass
+			self._close(proc, instr)
 		if stmt == "push":
 			pass
 		if stmt == "pop":
@@ -26,24 +29,54 @@ class kernel(object):
 			pass
 		if stmt == "ifzero":
 			pass
-	def _exec_proc(self, code):
+	def _open(self, proc, args):
+		if re.match(r"^[a-z]+$", args[0]):		# BUG:  matches numbers like 'af'
+			name = args.pop(0)
+			if name == "stdout":
+				if args and args[0] != 1:
+					raise Exception("Incorrect uuid for special file stdout")
+				uuid = "1"
+		if args and re.match(r"^[0-9a-zA-Z]+$", args[0]):
+			uuid = args[0]
+			if not name:
+				name = uuid
+		else:
+			if not name:
+				raise Exception("No name or uuid for segment creation")
+			uuid = str(uuid1().int)
+		for f in self.fd:
+			if f.uuid == int(uuid):
+				proc.open(f, name)
+				return
+		f = fd(int(uuid))
+		self.fd.add(f)
+		proc.open(f, name)
+	def _close(self, proc, args):
+		if args and re.match(r"^[a-z]+$", args[0]):
+			name = args[0]
+			f = proc.segment[name]
+		elif args and re.match(r"^[0-9a-zA-Z]+$", args[0]):
+			uuid = int(args[0])
+			if not name:
+				name = str(uuid)
+			for s in self.fd:
+				if s.uuid == uuid:
+					f = s
+		else:
+			raise Exception("Incorrect close argument")
+		self.fd.remove(f)
+		del proc.segment[name]
+	def _sched_proc(self, code):
 		p = process(code)
 		self.process.add(p)
 	def _start(self):
-		while len(self.process) > 0:
+		while self.process:
 			p = self.process.pop()
 			for i in range(100):	# 100 instructions per timeslice
 				instr = p.next()
 				if instr == None: return
 				self._exec_instr(p, instr)
 			self.process.add(p)
-	def open(self, uuid=None):
-		for f in self.fd:
-			if f.uuid == uuid:
-				return f
-		f = fd(uuid)
-		self.fd.add(f)
-		return f
 
 class process(object):
 	word_size = 8
@@ -54,6 +87,10 @@ class process(object):
 		self.ip = register("code")
 		self.sp = register("main")
 		self.fp = register("main")
+	def open(self, fd, name):
+		if name in self.segment:
+			raise Exception("Segment name '" + name + "' already in use.")
+		self.segment[name] = fd
 	def next(self):
 		if len(self.instruction) > self.ip.value:
 			self.ip.value += 1
