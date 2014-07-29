@@ -229,30 +229,25 @@ Error handling:
 asmlang grammar:
 ----------------
 
-	name = [a-zA-z]+
-	number = [0-9a-fA-F]+
-	offset = uuid = number
-	address = ((name | uuid) ":" number) | (("_ip" | "_sp" | "_fp") [offset])
-	length = number | "-"
-	expression = call | ref | deref | literal | operation
+	number = decimal | hex
+		decimal = [0-9]+
+		hex = "0x" (decimal | [a-fA-F])+
+	address = [ ["segment"] ("rel" | "val") register]
+		register = "ip" | "sp" | "fp"
+	push = literal | load
+		literal = "literal"	number
+		load = "load" ["bytes"] address	# [length]		
+	pop = open | close | store | store_bytes | call | return | jump | ifzero
+			| op | op_bytes
+		open = "open"					# "0" | segid
+		close = "close"					# segid
+		store = "store"	["bytes"] address
 		call = "call" address
-		ref = "ref" address
-		deref = "deref" address length
-		literal = "literal" number length
-		operation = ("not" | "and" | "or" | "xor" | ...) length
-	statement = open | close | push | pop | copy | ifzero
-		open = "open" (name | ([name] uuid))
-		close = "close" (name | uuid)
-		push = "push" expression
-		pop = "pop" [number] [address [length offset]]
-		copy = "copy" expression address
-		ifzero = "ifzero" expression address
+		return = "return"
+		ifzero = "if zero" address		# value
+		op = ("not" | "and" | "or" | "xor" | ...) ["bytes"]
+										# [length] operands...
 
-	- 'offset' is in granularities of word-size.
-	- When the 'length' argument is a hyphen, it denotes the architecture's
-	  word-size.
-	- A new process has two automatic segments, a stack for the execution of
-	  "main", and a code segment.
-	- Each thread has its own _ip, _sp, and _fp.  Initially, the first thread
-	  of a process has the values _ip = code:0, and _sp = _fp = main:0.
+	- A new process has two automatic segments, a code and a stack segment.
+	- Calling 'open' on a 0 value returns a new segment id.
 

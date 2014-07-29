@@ -3,32 +3,39 @@ from pyparsing import *
 
 def parse(code):
 	ParserElement.setDefaultWhitespaceChars(" \t\r")
-	name = Word(alphas)
-	number = Word(hexnums)
-	offset = number
-	uuid = number
-	address = (name + Suppress(":") + number) | (oneOf("_ip _sp _fp") + Optional(offset))
-	length = number | Literal("-")
+	decimal = Word(nums)
+	decimal.setParseAction(lambda t: int(t[0]))
+	hex = ("0x" + Word(hexnums)).leaveWhitespace()
+	hex.setParseAction(lambda t: int(t[1], 16))
+	number = decimal | hex
+	address = Optional(Optional("segment") + ("ref" | "val") + oneOf("ip sp fp"))
+	literal = "literal" + number
+	load = "load" + Optional("bytes") + address
+	store = "store" + Optional("bytes") + address
 	call = "call" + address
-	ref = "ref" + address
-	deref = "deref" + address + length
-	literal = "literal" + number + length
-	operation = oneOf("not and or xor shiftl lshiftr ashiftr add sub mult \
-			floordiv exp mod") + length
-	expression = call | ref | deref | literal | operation
-	openfd = "open" + (name ^ (Optional(name) + uuid))
-	close = "close" + (name | uuid)
-	push = "push" + expression
-	pop = "pop" + Optional(number) + Optional(address + Optional(length + offset))
-	copy = "copy" + expression + address
-	ifzero = "ifzero" + expression + address
-	statement = (openfd | close | push | pop | copy | ifzero) + lineEnd.suppress()
-	statement.setWhitespaceChars(" \t\r\n")
-	asmlang = OneOrMore(statement) + stringEnd
+	ifzero = "if zero" + address
+	op = oneOf("not and or xor shiftl lshiftr ashiftr add sub mult floordiv exp mod") + Optional("bytes")
+	simple = oneOf("open close return")
 
-	instr = []
-	def action(s, loc, toks):
+	instr = lineStart.suppress() + (literal | load | store | call | jump | ifzero | op | simple) + lineEnd.suppress()
+	instr.setWhitespaceChars(" \t\r\n")
+	asmlang = stringStart + OneOrMore(instr) + stringEnd
+
+	instrs = []
+	def action_instr(s, loc, toks):
 		instr.append(toks.asList())
-	statement.setParseAction(action)
+	instr.setParseAction(action_instr)
 	asmlang.parseString(code)
 	return instr
+
+# sets up a call frame
+def frame(addr):
+	f = """
+		load val fp
+		load val sp
+		store val fp
+		literal """ + str(addr) + """
+		call
+		store val fp
+		"""
+	return f
