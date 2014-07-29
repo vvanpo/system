@@ -2,11 +2,12 @@
 from pyparsing import *
 
 def parse(code):
+	ParserElement.setDefaultWhitespaceChars(" \t\r")
 	name = Word(alphas)
 	number = Word(hexnums)
 	offset = number
 	uuid = number
-	address = (name + ":" + number) | (oneOf("_ip _sp _fp") + Optional(offset))
+	address = (name + Suppress(":") + number) | (oneOf("_ip _sp _fp") + Optional(offset))
 	length = number | Literal("-")
 	call = "call" + address
 	ref = "ref" + address
@@ -15,19 +16,20 @@ def parse(code):
 	operation = oneOf("not and or xor shiftl lshiftr ashiftr add sub mult \
 			floordiv exp mod") + length
 	expression = call | ref | deref | literal | operation
-	open = "open" + (name | (Optional(name) + uuid))
+	openfd = "open" + (name ^ (Optional(name) + uuid))
 	close = "close" + (name | uuid)
 	push = "push" + expression
 	pop = "pop" + Optional(number) + Optional(address + Optional(length + offset))
 	copy = "copy" + expression + address
 	ifzero = "ifzero" + expression + address
-	statement = (open | close | push | pop | copy | ifzero) + lineEnd.suppress()
-	asmlang = OneOrMore(statement.setDebug()) + stringEnd
+	statement = (openfd | close | push | pop | copy | ifzero) + lineEnd.suppress()
+	statement.setWhitespaceChars(" \t\r\n")
+	asmlang = OneOrMore(statement) + stringEnd
 
 	instr = []
 	def action(s, loc, toks):
 		instr.append(toks.asList())
-	expression.setParseAction(action)
 	statement.setParseAction(action)
 	asmlang.parseString(code)
+	print(instr)
 	return instr

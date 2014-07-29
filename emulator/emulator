@@ -17,6 +17,7 @@ ifzero sub - _ip 4
 	pop 2
 	copy literal ffff - stdout:0
 copy ref code:3 _ip
+pop 2
 close stdout
 """
 
