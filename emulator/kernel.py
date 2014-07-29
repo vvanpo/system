@@ -10,6 +10,7 @@ class fd(bytearray):			# file descriptor
 		return self.uuid
 
 class kernel(object):
+	timeslice = 100				# instructions per timeslice
 	def __init__(self, init_process):
 		self.fd = {fd(1)}		# set of files, 1 is stdout
 		self.process = set()	# set of processes
@@ -22,7 +23,7 @@ class kernel(object):
 		if stmt == "close":
 			self._close(proc, instr)
 		if stmt == "push":
-			pass
+			self._push(proc, instr)
 		if stmt == "pop":
 			pass
 		if stmt == "copy":
@@ -59,13 +60,16 @@ class kernel(object):
 		else:
 			raise Exception("Incorrect close argument")
 		del proc.segment[name]
+	def _push(self, proc, args):
+		proc.sp.value += 1
+
 	def _sched_proc(self, code):
 		p = process(code)
 		self.process.add(p)
 	def _start(self):
 		while self.process:
 			p = self.process.pop()
-			for i in range(100):	# 100 instructions per timeslice
+			for i in range(kernel.timeslice):
 				instr = p.next()
 				if instr == None: return
 				self._exec_instr(p, instr)
