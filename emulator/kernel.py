@@ -25,11 +25,11 @@ class kernel(object):
 		if stmt == "push":
 			self._push(proc, instr)
 		if stmt == "pop":
-			pass
+			self._pop(proc, instr)
 		if stmt == "copy":
-			pass
+			self._copy(proc, instr)
 		if stmt == "ifzero":
-			pass
+			self._ifzero(proc, instr)
 	def _open(self, proc, args):
 		if re.match(r"^[a-z]+$", args[0]):		# BUG:  matches numbers like 'af'
 			name = args.pop(0)
@@ -62,7 +62,13 @@ class kernel(object):
 		del proc.segment[name]
 	def _push(self, proc, args):
 		proc.sp.value += 1
-
+	def _pop(self, proc, args):
+		num = 1
+		proc.sp.value -= num
+	def _copy(self, proc, args):
+		pass
+	def _ifzero(self, proc, args):
+		pass
 	def _sched_proc(self, code):
 		p = process(code)
 		self.process.add(p)
