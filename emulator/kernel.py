@@ -1,13 +1,12 @@
 
-import asmlang, functools, re
-from uuid import uuid1
+import asmlang, re
 
 class fd(bytearray):			# file descriptor
-	def __init__(self, uuid):
+	def __init__(self, fid):
 		super().__init__(self)
-		self.uuid = uuid
+		self.fid = fid
 	def __hash__(self):
-		return self.uuid
+		return self.fid
 
 class kernel(object):
 	timeslice = 100				# instructions per timeslice
@@ -16,32 +15,18 @@ class kernel(object):
 		self.process = set()	# set of processes
 		self._sched_proc(init_process)
 		self._start()
-	def _exec_instr(self, proc, instr):
-		stmt = instr.pop(0)
-		if stmt == "open":
-			self._open(proc, instr)
-		if stmt == "close":
-			self._close(proc, instr)
-		if stmt == "push":
-			self._push(proc, instr)
-		if stmt == "pop":
-			self._pop(proc, instr)
-		if stmt == "copy":
-			self._copy(proc, instr)
-		if stmt == "ifzero":
-			self._ifzero(proc, instr)
 	def _open(self, proc, args):
 		if re.match(r"^[a-z]+$", args[0]):		# BUG:  matches numbers like 'af'
 			name = args.pop(0)
 			if name == "stdout":
 				if args and args[0] != 1:
 					raise Exception("Incorrect uuid for special file stdout")
-				uuid = "1"
+				fid = "1"
 		if args and re.match(r"^[0-9a-zA-Z]+$", args[0]):
-			uuid = args[0]
+			fid = args[0]
 			if not name:
-				name = uuid
-		elif not uuid:
+				name = fid
+		elif not fid:
 			if not name:
 				raise Exception("No name or uuid for segment creation")
 			uuid = str(uuid1().int)
@@ -60,15 +45,6 @@ class kernel(object):
 		else:
 			raise Exception("Incorrect close argument")
 		del proc.segment[name]
-	def _push(self, proc, args):
-		proc.sp.value += 1
-	def _pop(self, proc, args):
-		num = 1
-		proc.sp.value -= num
-	def _copy(self, proc, args):
-		pass
-	def _ifzero(self, proc, args):
-		pass
 	def _sched_proc(self, code):
 		p = process(code)
 		self.process.add(p)
@@ -82,17 +58,16 @@ class kernel(object):
 			self.process.add(p)
 
 class process(object):
-	word_size = 8
 	def __init__(self, code):
 		self.instruction = asmlang.parse(code)
-		self.segment = {"code": bytearray(len(self.instruction)),
-						"main": bytearray()}
-		self.ip = register("code")
-		self.sp = register("main")
-		self.fp = register("main")
-	def open(self, fd, name):
-		if name in self.segment:
-			raise Exception("Segment name '" + name + "' already in use.")
+		self.segment = {2: bytearray(len(self.instruction)),
+						3: bytearray()}
+		self.ip = register(2)
+		self.sp = register(3)
+		self.fp = register(3)
+	def open(self, fd):
+		if fid in self.segment:
+			raise Exception("Segment id " + str(fid) + " already in use.")
 		self.segment[name] = fd
 	def next(self):
 		if len(self.instruction) > self.ip.value:
@@ -104,3 +79,12 @@ class register(object):
 		self.segment = segment
 		self.value = value
 
+class machine(object):
+	word_size = 8
+	def __init__(self):
+		self.kernel_mode = True
+		self.ip = register(None)
+		self.sp = register(None)
+		self.fp = register(None)
+	def exec(self, proc):
+		pass

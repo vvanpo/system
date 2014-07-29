@@ -7,18 +7,17 @@ Emulator
 import kernel
 
 init = """
-open stdout
-push literal 0 -
-push literal a -
-ifzero sub - _ip 4
-	push deref _fp 1 -
-	push literal 1 -
-	copy add - _fp 1
-	pop 2
-	copy literal ffff - stdout:0
-copy ref code:3 _ip
-pop 2
-close stdout
+literal 1
+open
+literal 0
+load ref _sp
+literal 10
+sub
+literal 5
+if zero val _ip
+
+literal 1
+close
 """
 
 def main():
