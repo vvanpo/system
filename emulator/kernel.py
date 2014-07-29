@@ -40,7 +40,7 @@ class kernel(object):
 			uuid = args[0]
 			if not name:
 				name = uuid
-		else:
+		elif not uuid:
 			if not name:
 				raise Exception("No name or uuid for segment creation")
 			uuid = str(uuid1().int)
@@ -54,17 +54,10 @@ class kernel(object):
 	def _close(self, proc, args):
 		if args and re.match(r"^[a-z]+$", args[0]):
 			name = args[0]
-			f = proc.segment[name]
 		elif args and re.match(r"^[0-9a-zA-Z]+$", args[0]):
-			uuid = int(args[0])
-			if not name:
-				name = str(uuid)
-			for s in self.fd:
-				if s.uuid == uuid:
-					f = s
+			name = args[0]
 		else:
 			raise Exception("Incorrect close argument")
-		self.fd.remove(f)
 		del proc.segment[name]
 	def _sched_proc(self, code):
 		p = process(code)

@@ -31,5 +31,4 @@ def parse(code):
 		instr.append(toks.asList())
 	statement.setParseAction(action)
 	asmlang.parseString(code)
-	print(instr)
 	return instr
