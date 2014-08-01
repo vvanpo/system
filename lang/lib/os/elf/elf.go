@@ -3,17 +3,29 @@
 package elf
 
 import (
-	"github.com/vvanpo/system/lang"
+	"bytes"
 	"debug/elf"
+	"github.com/vvanpo/system/lang"
 	"io"
 )
 
-func Read(r io.ReaderAt) (format lang.file, err error) {
-	f, err := elf.NewFile(r)
+func Read(r io.ReaderAt) (file *lang.File, err error) {
+/*	f, err := elf.NewFile(r)
+	if err != nil {
+		return
+	}
+	d := f.fileHeader.Data
+	c := f.fileHeader.Class
+	m := f.fileHeader.Machine
+*/	file = new(lang.File)
 	// To return lang code format
 	return
 }
 
-func Write(f lang.file) (w io.ReaderAt) {
+func Write(f lang.File, d elf.Data, c elf.Class, m elf.Machine) (r *bytes.Reader) {
+	var b []byte
+	b = append(b, elf.ELFMAG...)
+	r = bytes.NewReader(b)
 	return
 }
+
