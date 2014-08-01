@@ -4,5 +4,6 @@ package lang
 import (
 )
 
-type File struct {
+type Program struct {
+
 }
