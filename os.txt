@@ -104,3 +104,36 @@ System call:
 	files.  A single metadata file is available per-process, using file id 0,
 	which identifies the available file ids and names.
 
+Namespaces:
+-----------
+	Every process has its own namespace file that specifies the layout of its
+	namespace.  The file has a list of file bindings, and maps each bound
+	hierarchy to a namespace location on its corresponding file server.  The
+	file server is also just a process with its own namespace file.
+	A namespace entry might look like:
+		/data/bound-file --> <server>:/some/location	<attributes>
+	So the local mountpoint does not need to represent an entire filesystem as
+	served by the file server.
+	An ephemeral root filesystem is present for every process.
+	The namespace file describes the hierarchical nature of the namespace, by
+	placing sub-entries indented underneath their parent entries.  Multiple
+	directories can cohabit the same bindpoint, by using the same union
+	conventions present in Plan9:
+		- Entries cohabiting the same bindpoint are ordered
+		- An entry can be place anywhere in the list (front, back, somewhere
+		  in the middle), and is a union with the entries below it by default
+		- An entry can have an attribute to hide all entries below it
+		- Creating a file under a unioned bindpoint makes a call to the file
+		  server of the first entry with the 'write' attribute.  If the file
+		  creation fails it does not cascade down the list of entries, it just
+		  fails entirely.
+	If the file server in a namespace entry fails to respond, reads and writes
+	simply fail.  IO on a file within a union directory will succeed until
+	the client needs to query an unresponsive file server.  Because the
+	unresponsive server can't send the client the hierarchy associated with
+	the requested directory, the client can't cascade the request down to the
+	next entry's server, and must fail even if the failing server doesn't
+	actually contain the file in question (and hence the request would pass on
+	to the next entry if the server were responsive instead).
+
+
