@@ -7,6 +7,16 @@ Types:
 	Types 'word' and 'byte' are implicitly defined in every program, because
 	they are architecture-dependent.
 
+Operations:
+-----------
+	Operations are defined in type definitions.  Operations can be inherited or
+	referenced from other types.  Defining operations requires specifying a
+	grammar that is non-conflicting with existing grammars, and specifying the
+	exact effect on memory that the operation has.  Operations can modify the
+	data of its operands, allocate new memory and return a value, or both.
+	Immutable types are those that only have operations that strictly return
+	values without modifying their operand's data.
+
 Functions:
 ----------
 	Functions are a type.  They are the length of a single address, being where
