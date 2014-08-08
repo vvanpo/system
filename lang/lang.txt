@@ -7,6 +7,10 @@ Types:
 	Types 'word' and 'byte' are implicitly defined in every program, because
 	they are architecture-dependent.
 
+	Types are required on variable initialization, but can also be used with
+	literals.  'int 10' might result in a different memory representation than
+	'float 10'.
+
 Operations:
 -----------
 	Operations are defined in type definitions.  Operations can be inherited or
@@ -37,16 +41,24 @@ Functions:
 	to inherit the existing environment (i.e. approximately what UNIX' 'fork'
 	does).
 
-Assignment:
------------
-	New identifiers result in automatic allocation on the stack.
-	Assignment of value uses a left arrow.  Aliasing an address uses a colon.
+Variables:
+----------
+	Variables are placeholders for a type, and a location.  New identifiers
+	require a type and result in automatic allocation on the stack, regardless
+	of whether a value was assigned or not.
+	The exception is when an identifier uses the colon syntax to attach itself
+	to a specific location.  In general, this is only useful for functions.
 
-	a <- 10
-	f: func x -> y
+	func f: x -> y
+		< statements >
+	
+	Regular assignment uses a left arrow.
+
+	int a <- 10
+	func f: x -> y
 		y <- x
 		return
-	v <- f a
+	int v <- f a
 
 	The above example places value 10 in variable 'a', declares 'f' to point to
 	the start address of the defined function, and then places in 'v' the value
