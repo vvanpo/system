@@ -1,0 +1,10 @@
+
+type int integer
+	func __init: x
+		__arch.push x
+		return
+	{
+		add =
+	} func add: int x, int y -> int z
+		z <- __arch.add x y
+		return

@@ -1,24 +1,18 @@
 
 Types:
 ------
-	Types are defined by their (possibly variable) length in bits, their
-	alignment requirements (stack alignment, cache-line alignment, etc.), and
-	the operations available for them.
+	Types are defined by their structure in memory, and the operations available
+	for them.  The structure can be a set or variable length in bits, with a
+	specific alignment or not (stack-aligned, cacheline-aligned, etc.), and
+	possibly disjoint with variable-sized pieces.  Operations are defined as
+	functions.
 	Types 'word' and 'byte' are implicitly defined in every program, because
 	they are architecture-dependent.
 
 	Types are required on variable initialization, but can also be used with
 	literals.  'int 10' might result in a different memory representation than
-	'float 10'.
-
-	type
-		name:	< name >
-		length:	< arithmetic combination of types, and/or 'word' or 'byte' >
-		align:	( "stack" | "cache" | "none" )
-		ops:
-			{
-				< ebnf using 'OP_A', 'OP_B', etc. as operands >
-			}	< function  with 'OP_A', etc. as parameters >
+	'float 10'.  Normally, literals inherit the type of the variable they are
+	assigned to and don't require an explicit type declaration.
 
 Operations:
 -----------
