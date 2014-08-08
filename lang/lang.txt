@@ -7,9 +7,41 @@ Types:
 	Types 'word' and 'byte' are implicitly defined in every program, because
 	they are architecture-dependent.
 
+Functions:
+----------
+	Functions are a type.  They are the length of a single address, being where
+	the function begins, no alignment requirements, and the only operation is the
+	call operation.  Syntax for definition is:
+
+	func < parameters > -> < return values >
+		< statements >
+
+	The data that makes up the function instructions is stored in a code segment,
+	of which there is only one per process.  The code segment is managed by the
+	compiler, and generally has no need to be mutable.
+
+	To implement an 'eval'-esque function, it would be necessary to link a
+	compiler into the code segment, and use it to compile functions at run-time
+	into a new code segment.  As calling functions from a new segment results
+	in new processes, the eval function would need to set up an entrance hook
+	to inherit the existing environment (i.e. approximately what UNIX' 'fork'
+	does).
+
 Assignment:
 -----------
 	New identifiers result in automatic allocation on the stack.
+	Assignment of value uses a left arrow.  Aliasing an address uses a colon.
+
+	a <- 10
+	f: func x -> y
+		y <- x
+		return
+	v <- f a
+
+	The above example places value 10 in variable 'a', declares 'f' to point to
+	the start address of the defined function, and then places in 'v' the value
+	returned by 'f' when passed the argument 'a'.  The resultant value in 'v'
+	is 10.
 
 If statement:
 -------------
@@ -23,7 +55,8 @@ Function definitions:
 	h: func x, y, byte c -> z, r
 		< statements >
 	callback: func x, z -> y
-		return x z
+		y <- x z
+		return
 
 Function calls:
 ---------------
