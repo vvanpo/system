@@ -1,31 +1,40 @@
 
+Types:
+------
+	Types are defined by their (possibly variable) length in bits, their
+	alignment requirements (stack alignment, cache-line alignment, etc.), and
+	the operations available for them.
+	Types 'word' and 'byte' are implicitly defined in every program, because
+	they are architecture-dependent.
+
 Assignment:
-	New identifiers result in automatic allocation on the stack.
 -----------
-	v: 10
+	New identifiers result in automatic allocation on the stack.
 
 If statement:
-	A zero expression results in a branch skipping the statement-block.
 -------------
-	if < expression >
-		< statements>
+	A zero expression results in a branch skipping the statement-block.
 
-Defining functions:
--------------------
+	if < expression >
+		< statements >
+
+Function definitions:
+---------------------
 	h: func x, y, byte c -> z, r
 		< statements >
 	callback: func x, z -> y
 		return x z
 
-Calling functions:
+Function calls:
+---------------
 	Just like sh-derivatives (bash, ash, ksh, etc.), calling a function is as
 	simple as writing its identifier.  This complicates definitions of anonymous
 	functions, as there is an ambiguity between defining a function and calling
 	one.  The solution is that context determines when they are called;
 	assignment to a variable or passing as an argument (assigning to an argument
 	variable) results in a simple definition, while otherwise the lambda is
-	called immediately (like in a thread statement)
-------------------
+	called immediately (like in a thread statement).
+
 	h a b c
 	v: callback {
 		func a -> b
@@ -33,8 +42,36 @@ Calling functions:
 			return
 		}, 7
 
-New thread:
------------
+Threads:
+--------
+	New threads get a fresh stack, they copy/save no state from the calling
+	environment.
+
 	thread < function call >
 
+Segments:
+---------
+	A segment is the principal unit for IO.  Address references must always be
+	prefaced with a segment name, and cannot fall outside the segment bounds.
+	Segments are mapped regions of memory, and runtime procedures are inserted
+	anywhere that dynamic bounds-checking is required.
+	Segments are treated as mutable lists, and can thus be used as stacks or
+	queues.  The segment function initializes a new segment:
+
+	segment ( < name > | < path > )
+
+	A process is defined by its code segment.  Function calls to another
+	segment cause a new process/address space to be created, with the calling
+	thread blocking until the new process returns.  A process cannot return
+	until all its threads have returned, i.e. it will block on the main
+	function's return statement until all threads have returned.
+	Processes inherit no state from the caller other than the segments passed.
+
+Channels:
+---------
+	Buffered and unbuffered channels are managed by the runtime and possibly
+	the kernel to provide synchronous communication between threads and
+	processes.  They exist in a runtime-managed segment.
+
+	channel < name > [ < buffer length > ]
 
