@@ -236,7 +236,7 @@ asmlang grammar:
 		register = "ip" | "sp" | "fp"
 	push = literal | load
 		literal = "literal"	number
-		load = "load" ["bytes"] address	# [length]		
+		load = "load" ["bytes"] address	# [length]
 	pop = open | close | store | store_bytes | call | return | jump | ifzero
 			| op | op_bytes
 		open = "open"					# "0" | segid

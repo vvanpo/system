@@ -11,6 +11,15 @@ Types:
 	literals.  'int 10' might result in a different memory representation than
 	'float 10'.
 
+	type
+		name:	< name >
+		length:	< arithmetic combination of types, and/or 'word' or 'byte' >
+		align:	( "stack" | "cache" | "none" )
+		ops:
+			{
+				< ebnf using 'OP_A', 'OP_B', etc. as operands >
+			}	< function  with 'OP_A', etc. as parameters >
+
 Operations:
 -----------
 	Operations are defined in type definitions.  Operations can be inherited or
