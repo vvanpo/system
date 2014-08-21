@@ -1,0 +1,15 @@
+An interface specification must be complete enough to generate its
+documentation, and allow the compiler to verify an implementation's correctness.
+Every function must implement an interface.  A package/program is a collection
+of interfaces that are externally visible, and executes in its own address
+space.
+
+To satisfy the verifiability requirement, an interface must define not only the
+types of every input and output, but also the range of their allowable values.
+Interfaces must also specify any shared resources, i.e. inputs/outputs that
+could be modified during and/or after execution.  Finally, a compiler must be
+able to conclude that an implementation terminates.
+
+The language is safe, in the sense that a shared value is guaranteed to
+maintain type integrity for as long as it is in scope.
+

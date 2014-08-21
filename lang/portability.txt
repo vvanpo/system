@@ -1,0 +1,24 @@
+Every program should be portable across any Von Neumann machine.  This requires
+that the language be safe, i.e. that every value maintains type integrity
+throughout its existence.  Further, executable code must not be directly visible
+in any native format.
+
+These requirements imply that all primitive types must behave the same on all
+machines.  Types like 'int' must not have an architecture-dependent width.
+
+The following primitive types should be defined in the standard library:
+
+	number
+	array
+	function
+
+All executable code lives in a hierarchical namespace.  Binaries constitute top-
+level names, and exported interfaces are accessed via the namespace, using
+whitespace as a delimiter:
+
+	std collection list new
+
+	...is a function call to 'new' from the 'list' module, within the standard
+	library.
+
+
