@@ -22,11 +22,12 @@ Definitions:
 
 Processes:
 ----------
-	Processes serve only to act on files.
-
-	Mandatory access control is implemented for each process: processes have a
-	set of visible files, and child processes have their set of files chosen by
-	their parent.
+	Processes are defined by their private namespace---each process has a
+	namespace that only it can modify.  However, a namespace is easily
+	serialized to a file, and can be passed to another process to allow it to
+	mimic this namespace.
+	Beyond their private namespace, processes are further defined by a private
+	address space, and their code segment.
 
 Process trees & init-system:
 ----------------------------
@@ -92,8 +93,12 @@ Streams & Files:
 	overwritten.  The length of the segment/file can be queried, and a process
 	can ask to block until a file is a certain length.
 	Hence, files can act as queues (pipes) or stacks.
-	Files have no metadata, other than a uniquely identifying number that does
-	not change for the life of the file.
+	Files have no metadata, other than a name and inherent length.
+
+File storage:
+-------------
+	TODO:  Look at Camlistore's architecture for hints on how file storage and
+	management could be implemented.
 
 System call:
 ------------
