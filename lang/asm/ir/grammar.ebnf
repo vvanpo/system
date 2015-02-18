@@ -1,0 +1,29 @@
+
+instruction =   mnemonic, width, source, dest
+    mnemonic =  "mov"       ; move from source to dest
+                | "add"
+                | "sub"
+                | "mul"
+                | "div"
+                | "not"
+                | "and"
+                | "or"
+                | "xor"
+                | "ror"
+                | "rol"
+                | "shr"
+                | "shl"
+    width =     hex 
+    source =    immediate | register | address
+        immediate = number
+    dest =      register | address
+    ; value in register
+    register =  "_ip" | "_sp" | "_fp"
+    address =   reference | pointer
+        ; value in memory address
+        reference = "&", hex
+        ; value in address pointed to by register or address
+        pointer =   "*", register, [ ( "+" | "-" ), hex ]
+    number =    [ "-" ], hex
+    hex =       { "a".."z" | "0".."9" }-
+
