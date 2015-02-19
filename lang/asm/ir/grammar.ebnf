@@ -13,6 +13,7 @@ instruction =   mnemonic, width, source, dest
                 | "rol"
                 | "shr"
                 | "shl"
+                | "data"    ; special data 'instruction', taking an offset and a string or number as operands
     width =     hex 
     source =    immediate | register | address
         immediate = number
@@ -27,3 +28,7 @@ instruction =   mnemonic, width, source, dest
     number =    [ "-" ], hex
     hex =       { "a".."z" | "0".."9" }-
 
+; This needs a re-do; not all addressing modes should be available for every
+; instruction, and every operand.  Fewer addressing modes per instruction
+; allows for shorter instructions.  If ever we want a binary format (a la
+; bytecode) this will be useful.
