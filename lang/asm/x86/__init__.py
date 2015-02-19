@@ -1,11 +1,20 @@
 import re
 
 class instruction:
-    def __init__(self, opcode, mnemonic, operands, encoding, compat, long):
-        self.mnemonic = mnemonic
+    def __init__(self, opcode, operands, encoding, compat, long):
+        pass
+
+# Assembles instruction into binary format
+def assemble(source):
+    # Call nasm for now
+    pass
+# Disassembles binary instruction
+def disassemble(binary):
+    # Call ndisasm for now
+    pass
 
 def load_instructions():
-    instructions = set()
+    instructions = {}
     with open("instructions.txt") as f:
         mnemonic = ""
         encoding = {}
@@ -24,7 +33,7 @@ def load_instructions():
                     enc = encoding[line[48:52].strip()]
                     compat = line[52:56].strip()
                     long = line[56:].strip()
-                    instructions.add(instruction(opcode, mnemonic, operands, enc, compat, long))
+                    instructions[mnemonic] = instruction(opcode, operands, enc, compat, long)
             else:
                 mnemonic = line.strip()
                 encoding.clear()
@@ -33,5 +42,4 @@ def load_instructions():
 
 instructions = load_instructions()
 
-for i in instructions:
-    print(i.mnemonic)
+print(instructions)
