@@ -1,20 +1,27 @@
+# The parser for this file is extremely simple, and therefore syntax is very
+# strict.  Indented lines are exactly 2 spaces, and the opcode lines have
+# exact spacing requirements of for each section, starting at byte 2, 28, 48,
+# 52, and 56, respectively:
 # mnemonic
-#   opcode operands encoding compat 64bit
 #   encoding operand_1 operand_2 operand_3 operand_4
+#   ---
+#   opcode                    operands            encoding compat 64bit
 adc
-  "14 ib"           "AL, imm8"          I   V   V
-  "15 iw"           "AX, imm16"         I   V   V
-  "15 id"           "EAX, imm32"        I   V   V
-  "REX.W + 15 id"   "RAX, imm32"        I   V   V
-  RM  "ModRM:reg (r,w)"   "ModRM:r/m (r)"
-  MR  "ModRM:r/m (r,w)"   "ModRM:reg (r)"
-  MI  "ModRM:r/m (r,w)"   imm8
-  I   "AL/AX/EAX/RAX"     imm8
+  RM    ModRM:reg(r,w)      ModRM:r/m(r)
+  MR    ModRM:r/m(r,w)      ModRM:reg(r)
+  MI    ModRM:r/m(r,w)      imm8
+  I     AL/AX/EAX/RAX       imm8
+  ---
+  14 ib                     AL,imm8             I   V   V
+  15 iw                     AX,imm16            I   V   V
+  15 id                     EAX,imm32           I   V   V
+  REX.W + 15 id             RAX,imm32           I   V   V
 add
-  "04 ib"           "AL, imm8"          I   V   V
-  "05 iw"           "AX, imm16"         I   V   V
-  RM  "ModRM:reg (r,w)"   "ModRM:r/m (r)"
-  MR  "ModRM:r/m (r,w)"   "ModRM:reg (r)"
-  MI  "ModRM:r/m (r,w)"   imm8
-  I   "AL/AX/EAX/RAX"     imm8
+  RM    ModRM:reg(r,w)      ModRM:r/m(r)
+  MR    ModRM:r/m(r,w)      ModRM:reg(r)
+  MI    ModRM:r/m(r,w)      imm8
+  I     AL/AX/EAX/RAX       imm8
+  ---
+  04 ib                     AL,imm8             I   V   V
+  05 iw                     AX,imm16            I   V   V
 
