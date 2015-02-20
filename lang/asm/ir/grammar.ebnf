@@ -26,7 +26,7 @@ instruction =   mnemonic, width, source, dest
         ; value in address pointed to by register or address
         pointer =   "*", register, [ ( "+" | "-" ), hex ]
     number =    [ "-" ], hex
-    hex =       { "a".."z" | "0".."9" }-
+    hex =       { "a".."f" | "0".."9" }-
 
 ; This needs a re-do; not all addressing modes should be available for every
 ; instruction, and every operand.  Fewer addressing modes per instruction

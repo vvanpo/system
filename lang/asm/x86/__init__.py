@@ -1,4 +1,5 @@
 import re, os.path
+from .. import ir
 
 class instruction:
     def __init__(self, opcode, operands, encoding, compat, long):
@@ -44,5 +45,7 @@ def load_instructions():
 
 instructions = load_instructions()
 
-def mov(width, source, dest):
-    print(instructions["MOV"])
+## Functions to translate from ir x86
+
+def translate_ir(instruction):
+    pass
