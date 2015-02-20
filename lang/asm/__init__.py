@@ -16,7 +16,7 @@ class assembly:
 	def __init__(self, source):
 		line_no = 0
 		for l in source.splitlines():
-			line_no++
+			line_no += 1
 			if l.strip() == "": continue
 
 class label:

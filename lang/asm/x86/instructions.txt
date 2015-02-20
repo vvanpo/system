@@ -37,4 +37,3 @@ MOV
   89 /r                     r/m16,r16           MR  V   V
   89 /r                     r/m32,r32           MR  V   V
   REX.W + 89 /r             r/m64,r64           MR  NE  V
-

@@ -1,4 +1,4 @@
-import re
+import re, os.path
 
 class instruction:
     def __init__(self, opcode, operands, encoding, compat, long):
@@ -15,7 +15,8 @@ def disassemble(binary):
 
 def load_instructions():
     instructions = {}
-    with open("instructions.txt") as f:
+    dir = os.path.dirname(__file__)
+    with open(dir + "/instructions.txt") as f:
         mnemonic = ""
         encoding = {}
         sec_opcodes = False
@@ -33,13 +34,15 @@ def load_instructions():
                     enc = encoding[line[48:52].strip()]
                     compat = line[52:56].strip()
                     long = line[56:].strip()
-                    instructions[mnemonic] = instruction(opcode, operands, enc, compat, long)
+                    instructions[mnemonic].add(instruction(opcode, operands, enc, compat, long))
             else:
                 mnemonic = line.strip()
+                instructions[mnemonic] = set()
                 encoding.clear()
                 sec_opcodes = False
     return instructions
 
 instructions = load_instructions()
 
-print(instructions)
+def mov(width, source, dest):
+    print(instructions["MOV"])
