@@ -54,7 +54,7 @@ class assembly:
             if not self.sections: raise Exception("No section declarations")
             ## Label
             if w[0][-1] == ":":
-                name = label(current_section + "." + w[0][:-1])
+                name = label(current_section, w[0][:-1])
                 if name in self.labels: raise Exception("Duplicate label")
                 self.sections[current_section].append(name)
                 del w[0]
@@ -69,8 +69,6 @@ class section(str):
             raise Exception("Invalid section name")
 
 class label(str):
-    def __new__(cls, section, *args):
-        self = super().__new__(cls, *args)
+    def __new__(cls, section, name):
         if not re.match(r"[\w-]*$", self): raise Exception("Invalid label")
-        return section + "." + self
-
+        ###

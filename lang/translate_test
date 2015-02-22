@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+
+import asm, asm.ir as ir, asm.x86 as x86
+
+asm = asm.assembly("""
+architecture x86-64 elf
+section code
+    mov 8 _end _sp
+  testlabel:
+    mov 8 (_end + 1) _fp
+""")
+
+
