@@ -4,6 +4,9 @@ from .. import ir
 class instruction:
     def __init__(self, opcode, operands, encoding, compat, long):
         pass
+    @staticmethod
+    def from_string(string):
+        pass
 
 # Assembles instruction into binary format
 def assemble(source):
@@ -44,6 +47,8 @@ def load_instructions():
     return instructions
 
 instructions = load_instructions()
+arch_strings = ("x86-64", "i686", "i386")
+default_format = "elf"
 
 ## Functions to translate from ir x86
 
