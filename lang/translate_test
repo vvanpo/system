@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import asm, asm.ir as ir, asm.x86 as x86
+import asm
 
-asm = asm.assembly("""
+a = asm.assembly("""
 architecture ir
 section code
     mov {_end} _sp
@@ -11,10 +11,9 @@ section code
     mov {testlabel} _ip
 """)
 
-for l in asm.labels:
+for l in a.labels:
     print(l + " (" + str(l.index) + "):\t" + str(hash(l)))
-for s in asm.sections:
+for s in a.sections:
     print(s + " (" + str(len(s.instructions)) + "):\t\t" + str(hash(s)))
     print("\t\t\t" + str(s.instructions))
-
 

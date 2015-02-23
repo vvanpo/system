@@ -1,5 +1,4 @@
-from . import ir, x86
-import re
+import re, importlib, os
 
 # Format of all assembly files is simple:
 #   assembly =          [ newline ], architecture, { section }-
@@ -20,16 +19,6 @@ import re
 #     newline =     { ? the Unicode code point U+000a ? }-
 class assembly:
     def __init__(self, source):
-        def architecture_add(name, format=None):
-            for a in (ir, x86):
-                if name in a.arch_strings:
-                    self.architecture = a
-                    if not format: format = a.default_format
-                    break
-            if not hasattr(self, "architecture"):
-                raise Exception("Invalid architecture declaration")
-            # TODO: enumerate different formats
-            self.format = format
         # Set of sections
         self.sections = set()
         # Set of labels
@@ -43,7 +32,9 @@ class assembly:
             if not hasattr(self, "architecture"):
                 if not w[0] == "architecture" or len(w) < 2:
                     raise Exception("Missing architecture declaration")
-                architecture_add(*w[1:])
+                self.architecture = architecture.get_instance(w[1])
+                # TODO: enumerate different formats
+                if len(w) > 2: self.format = w[2:]
                 continue
             ## Section
             if w[0] == "section":
@@ -66,10 +57,19 @@ class assembly:
             s.instructions.append(" ".join(w))
 
 class architecture:
-    modules = []
+    names = {}
     @classmethod
-    def register(cls, module):
-        cls.modules.append(module)
+    def register(cls, name, instruction_class):
+        self = cls(instruction_class)
+        self.name = name
+        cls.names[name] = self
+    def __init__(self, instruction_class):
+        self.instruction = instruction_class
+    @classmethod
+    def get_instance(cls, name):
+        if name not in cls.names:
+            raise Exception("Invalid architecture name: " + name)
+        return cls.names[name]
 
 class section(str):
     def __new__(cls, name):
@@ -86,4 +86,9 @@ class label(str):
         self.name = name    # name + section describe a unique label
         self.index = index  # index into section matching instruction pointed to
         return self
+
+# Import all modules in . directory so they will register with architecture
+modules = [ '.' + p for p in os.listdir(*__path__) if p[0] != '.' and p[0] != '_' ]
+for m in modules:
+    importlib.import_module(m, __name__)
 

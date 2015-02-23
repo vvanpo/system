@@ -1,11 +1,11 @@
 # The parser for this file is extremely simple, and therefore syntax is very
 # strict.  Indented lines are exactly 2 spaces, and the opcode lines have
 # exact spacing requirements of for each section, starting at byte 2, 28, 48,
-# 52, and 56, respectively:
+# 52, 56, and 60 respectively:
 # mnemonic
 #   encoding operand_1 operand_2 operand_3 operand_4
 #   ---
-#   opcode                    operands            encoding compat 64bit
+#   opcode                    operands            encoding compat 64bit model-introduced
 ADC
   RM    ModRM:reg(r,w)      ModRM:r/m(r)
   MR    ModRM:r/m(r,w)      ModRM:reg(r)
@@ -15,7 +15,7 @@ ADC
   14 ib                     AL,imm8             I   V   V
   15 iw                     AX,imm16            I   V   V
   15 id                     EAX,imm32           I   V   V
-  REX.W + 15 id             RAX,imm32           I   NE  V
+  REX.W + 15 id             RAX,imm32           I   NE  V   x86-64
 ADD
   RM    ModRM:reg(r,w)      ModRM:r/m(r)
   MR    ModRM:r/m(r,w)      ModRM:reg(r)
@@ -33,7 +33,7 @@ MOV
   MI    ModRM:r/m(w)        imm8/16/32/64 
   ---
   88 /r                     r/m8,r8             MR  V   V
-  REX + 88 /r               r/m8,r8             MR  NE  V
+  REX + 88 /r               r/m8,r8             MR  NE  V   x86-64
   89 /r                     r/m16,r16           MR  V   V
   89 /r                     r/m32,r32           MR  V   V
-  REX.W + 89 /r             r/m64,r64           MR  NE  V
+  REX.W + 89 /r             r/m64,r64           MR  NE  V   x86-64
