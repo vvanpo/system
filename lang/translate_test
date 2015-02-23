@@ -3,11 +3,18 @@
 import asm, asm.ir as ir, asm.x86 as x86
 
 asm = asm.assembly("""
-architecture x86-64 elf
+architecture ir
 section code
-    mov 8 _end _sp
+    mov {_end} _sp
   testlabel:
-    mov 8 (_end + 1) _fp
+    mov {_end + 1} _fp
+    mov {testlabel} _ip
 """)
+
+for l in asm.labels:
+    print(l + " (" + str(l.index) + "):\t" + str(hash(l)))
+for s in asm.sections:
+    print(s + " (" + str(len(s.instructions)) + "):\t\t" + str(hash(s)))
+    print("\t\t\t" + str(s.instructions))
 
 

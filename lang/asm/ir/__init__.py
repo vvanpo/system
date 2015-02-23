@@ -3,4 +3,8 @@ arch_strings = ("ir",)
 default_format = "bin"
 
 class instruction:
-    pass
+    @classmethod
+    def from_string(cls, string):
+        pass
+
+
