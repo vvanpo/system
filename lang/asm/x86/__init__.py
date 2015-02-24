@@ -39,11 +39,13 @@ class instruction:
     @classmethod
     def from_string(cls, string):
         pass
+    @classmethod
+    def from_binary(cls, bytes):
+        pass
 
 instruction._load(__path__[0] + "/instructions.txt")
-print(instruction.models)
 
-# Register with architecture from ..asm
+# Register models with ..asm.architecture
 for m in instruction.models.keys():
     asm.architecture.register(m, instruction)
 

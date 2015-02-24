@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
-
 import asm
 
-a = asm.assembly("""
+a = asm.assembly(r"""
+format bin
 architecture ir
-section code
+section code    align=8
     mov {_end} _sp
   testlabel:
     mov {_end + 1} _fp
     mov {testlabel} _ip
+  end:
+section data data align=64
+  hello: "hello,      日本語world!\n", a93d
+    "{2}\{code.end * 2}}test", {a93d + hello * code.testlabel}, r"\\\\n", "\n"
+    {2**8 - 1}, "{hello}   \{hello+1}"
+    
+    0
+    ""
+  end:
 """)
 
 for l in a.labels:
-    print(l + " (" + str(l.index) + "):\t" + str(hash(l)))
-for s in a.sections:
-    print(s + " (" + str(len(s.instructions)) + "):\t\t" + str(hash(s)))
-    print("\t\t\t" + str(s.instructions))
+    print(str(l.section) + '.' + str(l))
+for s in a.format.sections:
+    print(str(s) + " (" + str(len(s.statements)) + "):")
+    for stmt in s.statements:
+        if type(stmt) == asm.data.data: print(stmt, stmt.labels)
+        else: print(stmt)
 
