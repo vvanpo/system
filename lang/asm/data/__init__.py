@@ -1,4 +1,4 @@
-import asm
+import asm, re
 
 # data is a simple 'architecture' for storing strings and numbers and the like
 # in binaries
@@ -16,43 +16,50 @@ import asm
 #       ; require actual labels, e.g. {2**8 - 1}
 #       integer =   { "0" .. "9" | "a" .. "f" }-
 class data:
+    # Captured groups:
+    r = re.compile(r'\s*?(?:'
+            + r'{(.+?)}|'       # 1 label
+            + r'([0-9a-f]+)|'   # 2 integer
+            + r'('              # 3 string
+              + r'r"(?:\\"|.)*?(?<![^\\]\\)"|' # raw string
+              + r'(?:"(?:(?<!\\)(?:\\\\)*"|.)*?(?<!\\)(?:\\\\)*")' # regular string
+            + r')'              # /string
+            + r')(?:\s*,)?|(?:\s*$)')
     @classmethod
     def from_string(cls, stmt):
-        def parse_string(stmt, value, labels):
-            raw = False
-            ascii = False
-            i = stmt.find('"')
-            if i > 0:
-                if stmt[0] == 'r': raw = True
-                if stmt[0] == 'b' or stmt[1] == 'b': ascii = True
-            while True:
-                if i == -1: raise Exception("Unending string")
-                i = stmt.find('"', i+1)
-                if stmt[i-1] != "\\": break
-            while True:
-                j = stmt.find(r'\{')
-                if j == -1: break
-                k = stmt.find('}', j)
-                labels[j] = stmt[j+2:k]
-                stmt = stmt[:j] + stmt[k+1:]
-            value.extend(stmt[:i].encode())
-            return stmt[i+1:].strip()
-        def parse_integer(stmt, value):
-            i = stmt.find(',')
-            if i == -1: i = len(stmt)
-            value.extend(stmt[:i].encode())
-            return stmt[i+1:].strip()
         value = bytearray()
         # Dictionary of index -> label-expression
         labels = {}
-        stmt = stmt.strip()
-        while stmt:
-            # Check for string
-            if stmt[0] == '"' or len(stmt) > 2 and (stmt[1] == '"' or stmt[:2] == 'rb"'):
-                stmt = parse_string(stmt, value, labels)
-                continue
-            stmt = parse_integer(stmt, value)
-        return cls(bytes(value), labels)
+        def parse_string(s):
+            nonlocal value, labels
+            raw = False
+            if s[0] == 'r':
+                s = s[1:]
+                raw = True
+            s = s[1:-1]
+            if not raw:
+                m = re.split(r'(\\{.+?})', s)
+                for j in range(0, len(m), 2):
+                    # TODO: make encoding a per-line option
+                    value.extend(m[j].encode('utf-8'))
+                    if j < len(m)-1:
+                        if len(value) not in labels: labels[len(value)] = []
+                        labels[len(value)].append(m[j+1])
+        s = cls.r.split(stmt)
+        num_groups = 4
+        for i in range(0, len(s)-1, num_groups):   # number_matches = (s - 1)/num_groups
+            m = s[i:i+num_groups]
+            if m[0]: raise Exception("Invalid data statement: " + stmt)
+            if m[1]:
+                if len(value) not in labels: labels[len(value)] = []
+                labels[len(value)].append(m[1])
+            if m[2]:
+                num = int(m[2], 16)
+                align = 1   # TODO: add option in data sections
+                l = (num.bit_length() // (align*8)) + 1
+                value.extend(num.to_bytes(l, 'little'))
+            if m[3]: parse_string(m[3])
+        return cls(bytes(stmt.encode()), labels)
     def __init__(self, value, labels):
         self.value = value
         self.labels = labels
