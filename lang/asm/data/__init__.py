@@ -6,12 +6,11 @@ import asm, re
 #   statement =     { value, ",", space }, value
 #     value =       string | integer
 #       ; string syntax is very similar to python3 strings
-#       string =    [ prefix ], '"', { character | escape }, '"'
-#         prefix =  "r" | "b" | "rb"        ; raw, ascii, raw & ascii
-#         character =   ? any printable character except for \, newline, or double-quote ?
-#         ; escapes are included for the usual C escapes, \xxx bytes, \uxx characters,
+#       string =    [ prefix ], '"', { character }, '"'
+#         prefix =  "r"
+#         character =   ? any printable character except for newline ?
+#         ; escapes are included for the usual C escapes, \xxx bytes, \uxxxx, \Uxxxxxxxx,
 #         ; and label arithmetic embedded in strings using \{}
-#         escape =  "\", ? any printable character ?
 #       ; label arithmetic is also available to specify integers, and doesn't always
 #       ; require actual labels, e.g. {2**8 - 1}
 #       integer =   { "0" .. "9" | "a" .. "f" }-
@@ -32,6 +31,8 @@ class data:
         labels = {}
         def parse_string(s):
             nonlocal value, labels
+            # TODO: make encoding an architecture option
+            add_val = lambda x: value.extend(x.encode('utf-8'))
             raw = False
             if s[0] == 'r':
                 s = s[1:]
@@ -39,12 +40,8 @@ class data:
             s = s[1:-1] # string double quotes
             if not raw:
                 s = re.split(r'((?:\\\\)+)|\\{(.+?)}|\\([abfnrtv"])|\\x([0-9a-f]{2})|\\u([0-9a-f]{4})|\\U([0-9a-f]{8})', s)
-                print(s)
                 for i in range(0, len(s)-1, 7):
                     m = s[i:i+7]
-                    # TODO: make encoding an architecture option
-                    add_val = lambda x: value.extend(x.encode('utf-8'))
-                    #value.extend(m[0].encode('utf-8'))
                     add_val(m[0])
                     if m[1]: add_val(m[1][::2])
                     if m[2]:
@@ -54,6 +51,12 @@ class data:
                     if m[4]: value.extend(bytes.fromhex(m[4]))
                     if m[5]: add_val(chr(int(m[5], 16)))
                     if m[6]: add_val(chr(int(m[6], 16)))
+            else:
+                s = re.split(r'\\(["])', s)
+                for i in range(0, len(s)-1, 2):
+                    add_val(s[i])
+                    if s[i+1]: add_val('"')
+            add_val(s[-1])
         s = cls.r.split(stmt)
         for i in range(0, len(s)-1, 4):   # number_matches = (s - 1)/4
             m = s[i:i+4]
