@@ -11,12 +11,12 @@ section code    align=8
     mov {testlabel} _ip
   end:
 section data data align=64
-  hello: "hello,      日本語world!\n", a93d
+  hello: "hello,      日本語world!\n", 010203af
     "{2}\{code.end * 2}}\{data.hello}test", {a93d + hello * code.testlabel}, r"\\\\n", "\n"
     {2**8 - 1}, {a}, "\{a}", "{hello}   \{hello+1}"
     "this is a test\\\"\\", r"a\" simple test\\\"
     0, b,
-    r""
+    "\u65e5"
   end:
 """)
 

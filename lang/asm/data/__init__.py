@@ -36,19 +36,27 @@ class data:
             if s[0] == 'r':
                 s = s[1:]
                 raw = True
-            s = s[1:-1]
+            s = s[1:-1] # string double quotes
             if not raw:
-                m = re.split(r'(\\{.+?})', s)
-                for j in range(0, len(m), 2):
-                    # TODO: make encoding a per-line option
-                    value.extend(m[j].encode('utf-8'))
-                    if j < len(m)-1:
+                s = re.split(r'((?:\\\\)+)|\\{(.+?)}|\\([abfnrtv"])|\\x([0-9a-f]{2})|\\u([0-9a-f]{4})|\\U([0-9a-f]{8})', s)
+                print(s)
+                for i in range(0, len(s)-1, 7):
+                    m = s[i:i+7]
+                    # TODO: make encoding an architecture option
+                    add_val = lambda x: value.extend(x.encode('utf-8'))
+                    #value.extend(m[0].encode('utf-8'))
+                    add_val(m[0])
+                    if m[1]: add_val(m[1][::2])
+                    if m[2]:
                         if len(value) not in labels: labels[len(value)] = []
-                        labels[len(value)].append(m[j+1])
+                        labels[len(value)].append('"' + m[2] + '"')
+                    if m[3]: add_val('\a\b\f\n\r\t\v"'['abfnrtv"'.index(m[3])])
+                    if m[4]: value.extend(bytes.fromhex(m[4]))
+                    if m[5]: add_val(chr(int(m[5], 16)))
+                    if m[6]: add_val(chr(int(m[6], 16)))
         s = cls.r.split(stmt)
-        num_groups = 4
-        for i in range(0, len(s)-1, num_groups):   # number_matches = (s - 1)/num_groups
-            m = s[i:i+num_groups]
+        for i in range(0, len(s)-1, 4):   # number_matches = (s - 1)/4
+            m = s[i:i+4]
             if m[0]: raise Exception("Invalid data statement: " + stmt)
             if m[1]:
                 if len(value) not in labels: labels[len(value)] = []
@@ -59,7 +67,7 @@ class data:
                 l = (num.bit_length() // (align*8)) + 1
                 value.extend(num.to_bytes(l, 'little'))
             if m[3]: parse_string(m[3])
-        return cls(bytes(stmt.encode()), labels)
+        return cls(value, labels)
     def __init__(self, value, labels):
         self.value = value
         self.labels = labels
