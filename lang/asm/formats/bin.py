@@ -6,19 +6,20 @@ class section(section):
         self.start = None   # section start-address is determined by the length
                             # of previous sections
         if not string: return
-        option = string.partition('=')
-        if option[0] == "start": self.start = int(option[2])
-        elif option[0] == "align": self.align = int(option[2])
-        else: raise Exception("Invalid section option '" + option[0] + "' for bin format")
+        m = re.match(r'(?:\s*(?:align=([0-9]+)|start=([0-9]+)))+', string)
+        if m and m.group(1): self.align = int(m.group(1))
+        if m and m.group(2): self.start = int(m.group(2))
+        if not m and string.strip():
+            raise Exception("Invalid section option '" + string.strip() + "' for bin format")
 
 class bin(bin_format):
-    def new_section(self, *args):
+    def add_section(self, *args):
         s = section(self, *args)
-        self.add_section(s)
+        super().add_section(s)
         return s
-    def calculate_addr(self):
-        for s in self.sections:
-            pass
+    def assemble(self):
+        for i in range(len(self.sections)):
+            s = self.sections[i]
 
 bin.register('bin')
 

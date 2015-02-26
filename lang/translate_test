@@ -20,9 +20,3 @@ section data data align=64
   end:
 """)
 
-for s in a.format.sections:
-    print(str(s) + " (" + str(len(s.statements)) + "):")
-    for stmt in s.statements:
-        if type(stmt) == asm.data.data: print(stmt, stmt.labels)
-        else: print(stmt)
-

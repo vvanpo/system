@@ -26,8 +26,6 @@ from asm.formats import bin_format
 class assembly:
     def __init__(self, source):
         self.default_architecture = ('ir', "")
-        # List of labels
-        self.labels = []
         lines = source.splitlines()
         line_no = 0
         for l in lines:
@@ -54,25 +52,22 @@ class assembly:
                         a = (w[2],"")
                         format_options = " ".join(w[3:])
                     except Exception: format_options = " ".join(w[2:])
-                section = self.format.new_section(w[1], architecture.new(a[0]), option_string)
+                section = self.format.add_section(w[1], architecture.new(a[0]), option_string)
                 continue
             if not self.format.sections: raise Exception("No section declarations")
             ## Label
             # In the case of data statements, it's possible that a ':' could be
             # found in the data string instead, so we need to make sure it isn't
             # a string by checking for '"'
+            # BUG: TODO: doesn't check for raw string
             if w[0][-1] == ':' and w[0][0] != '"':
-                name = w[0][:-1]
+                section.add_label(w[0][:-1])
                 l = l[l.index(':')+1:]
-                del w[0]
-                lbl = label(name, section)
-                if lbl in self.labels:
-                    raise Exception("Duplicate label: " + str(section) + "." + name)
-                self.labels.append(lbl)
-                if not w: continue
+                if len(w) == 1: continue
             ## Instruction
             section.add_statement(l)
-        self.format.calculate_addr()
+        self.format.assemble()
+        print(self.format)
 
 class architecture:
     names = {}
@@ -84,21 +79,6 @@ class architecture:
         if name not in cls.names:
             raise Exception("Invalid architecture name: " + name)
         return cls.names[name](options)
-
-class label:
-    @staticmethod
-    def expression(e):
-        pass
-    def __init__(self, name, section):
-        if not re.match(r"[\w-]+$", name):
-            raise Exception("Invalid label: " + str(section) + "." + name)
-        self.name = name
-        self.section = section
-    def __eq__(self, other):
-        if self.name == other.name and self.section == other.section: return True
-        return False
-    def __str__(self):
-        return self.name
 
 # Import all modules in . directory so they will register with architecture
 for m in [ '.' + p for p in os.listdir(*__path__) if p[0] != '.' and p[0] != '_' ]:

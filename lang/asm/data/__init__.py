@@ -1,5 +1,13 @@
 import asm, re
 
+class statement(bytearray):
+    def __init__(self, *args):
+        super().__init__(*args)
+        # Dictionary of index -> label-expression
+        self.labels = {}
+    def __repr__(self):
+        return super().__repr__()[10:-1] + ' -> ' + str(self.labels)
+
 # data is a simple 'architecture' for storing strings and numbers and the like
 # in binaries
 # Syntax for various kinds of data:
@@ -15,14 +23,13 @@ import asm, re
 #       ; require actual labels, e.g. {2**8 - 1}
 #       integer =   { "0" .. "9" | "a" .. "f" }-
 class data(asm.architecture):
-    # Captured groups:
     _stmt_regex = re.compile(r'\s*?(?:'
-            + r'{(.+?)}|'       # 1 label
-            + r'([0-9a-f]+)|'   # 2 integer
-            + r'('              # 3 string
+            + r'{(.+?)}|'                   # 1 label
+            + r'([0-9a-f]+)|'               # 2 integer
+            + r'('                          # 3 string
               + r'r"(?:\\"|.)*?(?<![^\\]\\)"|' # raw string
               + r'(?:"(?:(?<!\\)(?:\\\\)*"|.)*?(?<!\\)(?:\\\\)*")' # regular string
-            + r')'              # /string
+            + r')'
             + r')(?:\s*,)?|(?:\s*$)')
     _str_regex = re.compile(r'((?:\\\\)+)|' # 1 even number of \
             + r'\\{(.+?)}|'                 # 2 label expression
@@ -33,15 +40,19 @@ class data(asm.architecture):
     def __init__(self, option_string):
         self.align = 1
         self.encoding = 'utf-8'
-        m = re.match(r'(?:\s*(?:align=([0-9]+)|encoding=(utf-8)))+', option_string)
+        self.endian = 'little'
+        m = re.match(r'(?:\s*(?:align=([0-9]+)|'
+                    + r'encoding=(utf-8)|endian=(little|big)))+', option_string)
         if m and m.group(1): self.align = int(m.group(1))
         if m and m.group(2): self.encoding = m.group(2)
-    def statement(self, stmt):
-        value = bytearray()
-        # Dictionary of index -> label-expression
-        labels = {}
+        if m and m.group(3): self.endian = m.group(3)
+        self.statements = []
+    def __repr__(self):
+        return 'data:\n' + ''.join([ '   ' + repr(s) + '\n' for s in self.statements ])
+    def add_statement(self, string):
+        value = statement()
         def parse_string(s):
-            nonlocal value, labels
+            nonlocal value
             add_val = lambda x: value.extend(x.encode(self.encoding))
             raw = False
             if s[0] == 'r':
@@ -55,8 +66,8 @@ class data(asm.architecture):
                     add_val(m[0])
                     if m[1]: add_val(m[1][::2])
                     if m[2]:
-                        if len(value) not in labels: labels[len(value)] = []
-                        labels[len(value)].append('"' + m[2] + '"')
+                        if len(value) not in value.labels: value.labels[len(value)] = []
+                        value.labels[len(value)].append('"' + m[2] + '"')
                     if m[3]: add_val('\a\b\f\n\r\t\v"'['abfnrtv"'.index(m[3])])
                     if m[4]: value.extend(bytes.fromhex(m[4]))
                     if m[5]: add_val(chr(int(m[5], 16)))
@@ -67,20 +78,19 @@ class data(asm.architecture):
                     add_val(s[i])
                     if s[i+1]: add_val('"')
             add_val(s[-1])
-        s = self.__class__._stmt_regex.split(stmt)
+        s = self.__class__._stmt_regex.split(string)
         for i in range(0, len(s)-1, 4):   # number_matches = (s - 1)/4
             m = s[i:i+4]
-            if m[0]: raise Exception("Invalid data statement: " + stmt)
+            if m[0]: raise Exception("Invalid data statement: " + string)
             if m[1]:
-                if len(value) not in labels: labels[len(value)] = []
-                labels[len(value)].append(m[1])
+                if len(value) not in value.labels: value.labels[len(value)] = []
+                value.labels[len(value)].append(m[1])
             if m[2]:
                 num = int(m[2], 16)
                 l = self.align * (num.bit_length() // (self.align * 8)) + self.align
-                print(l, self.align)
-                value.extend(num.to_bytes(l, 'little'))
+                value.extend(num.to_bytes(l, self.endian))
             if m[3]: parse_string(m[3])
-        return (value, labels)
+        self.statements.append(value)
 
 # Register the 'data' architecture name with ..asm package
 asm.architecture.register('data', data)
