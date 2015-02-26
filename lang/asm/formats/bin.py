@@ -1,8 +1,6 @@
 from asm.formats import section, bin_format
 
 class section(section):
-    def __init__(self, *args):
-        super().__init__(*args)
     def parse_options(self, string):
         self.align = 0
         self.start = None   # section start-address is determined by the length
@@ -18,6 +16,9 @@ class bin(bin_format):
         s = section(self, *args)
         self.add_section(s)
         return s
+    def calculate_addr(self):
+        for s in self.sections:
+            pass
 
 bin.register('bin')
 

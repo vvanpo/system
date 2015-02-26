@@ -4,11 +4,11 @@ import asm
 a = asm.assembly(r"""
 format bin
 architecture ir
-section code    align=8
-    mov {_end} _sp
+section code    data align=8
+    "mov {_end} _sp \{testlabel} \{data.end}"
   testlabel:
-    mov {_end + 1} _fp
-    mov {testlabel} _ip
+    "mov {_end + 1} _fp"
+    "mov {testlabel} _ip"
   end:
 section data data align=64
   hello: "hello,      日本語world!\n", 010203af
@@ -20,8 +20,6 @@ section data data align=64
   end:
 """)
 
-for l in a.labels:
-    print(str(l.section) + '.' + str(l))
 for s in a.format.sections:
     print(str(s) + " (" + str(len(s.statements)) + "):")
     for stmt in s.statements:

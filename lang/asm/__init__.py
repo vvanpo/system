@@ -25,6 +25,7 @@ from asm.formats import bin_format
 #     newline =     { ? the Unicode code point U+000a ? }-
 class assembly:
     def __init__(self, source):
+        self.default_architecture = ('ir', "")
         # List of labels
         self.labels = []
         lines = source.splitlines()
@@ -37,11 +38,11 @@ class assembly:
             if not hasattr(self, 'format'):
                 if not w[0] == 'format' or len(w) < 2:
                     raise Excepion("Missing format declaration")
-                self.format = bin_format.get_class(w[1])()
+                self.format = bin_format.new(w[1])
                 continue
             ## Architecture
             if w[0] == "architecture":
-                self.default_architecture = architecture.get_instance(w[1])
+                self.default_architecture = (w[1], " ".join(w[2:]))
                 continue
             ## Section
             if w[0] == "section":
@@ -49,11 +50,11 @@ class assembly:
                 option_string = ""
                 if len(w) > 2:
                     try:
-                        a = architecture.get_instance(w[2])
-                        option_string = " ".join(w[3:])
-                    except Exception:
-                        option_string = " ".join(w[2:])
-                section = self.format.new_section(w[1], a, option_string)
+                        # TODO: arch options
+                        a = (w[2],"")
+                        format_options = " ".join(w[3:])
+                    except Exception: format_options = " ".join(w[2:])
+                section = self.format.new_section(w[1], architecture.new(a[0]), option_string)
                 continue
             if not self.format.sections: raise Exception("No section declarations")
             ## Label
@@ -62,7 +63,7 @@ class assembly:
             # a string by checking for '"'
             if w[0][-1] == ':' and w[0][0] != '"':
                 name = w[0][:-1]
-                l = l[l.index(':') + 1:]
+                l = l[l.index(':')+1:]
                 del w[0]
                 lbl = label(name, section)
                 if lbl in self.labels:
@@ -71,23 +72,23 @@ class assembly:
                 if not w: continue
             ## Instruction
             section.add_statement(l)
+        self.format.calculate_addr()
 
 class architecture:
     names = {}
     @classmethod
-    def register(cls, name, statement_class):
-        self = cls(statement_class)
-        self.name = name
-        cls.names[name] = self
+    def register(cls, name, architecture):
+        cls.names[name] = architecture
     @classmethod
-    def get_instance(cls, name):
+    def new(cls, name, options=""):
         if name not in cls.names:
             raise Exception("Invalid architecture name: " + name)
-        return cls.names[name]
-    def __init__(self, statement_class):
-        self.statement = statement_class
+        return cls.names[name](options)
 
 class label:
+    @staticmethod
+    def expression(e):
+        pass
     def __init__(self, name, section):
         if not re.match(r"[\w-]+$", name):
             raise Exception("Invalid label: " + str(section) + "." + name)

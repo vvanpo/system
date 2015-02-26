@@ -14,8 +14,7 @@ class section:
     def __str__(self):
         return self.name
     def add_statement(self, statement):
-        self.statements.append(self.architecture.statement.from_string(statement))
-        return statement
+        self.statements.append(self.architecture.statement(statement))
 
 class bin_format:
     names = {}
@@ -23,16 +22,15 @@ class bin_format:
     def register(cls, name):
         cls.names[name] = cls
     @classmethod
-    def get_class(cls, name):
+    def new(cls, name): 
         if name not in cls.names:
             raise Exception("Invalid file format: " + name)
-        return cls.names[name]
+        return cls.names[name]()
     def __init__(self):
         self.sections = []
-    def add_section(self, s):
-        if s in self.sections: raise Exception("Duplicate section name: " + str(s))
-        self.sections.append(s)
-
+    def add_section(self, name):
+        if name in self.sections: raise Exception("Duplicate section name: " + str(s))
+        self.sections.append(name)
 
 for m in [ '.' + p[:-3] for p in os.listdir(*__path__) if p[0] != '.' and p[0] != '_' and p[-3:] == ".py" ]:
     importlib.import_module(m, __name__)

@@ -14,9 +14,9 @@ import asm, re
 #       ; label arithmetic is also available to specify integers, and doesn't always
 #       ; require actual labels, e.g. {2**8 - 1}
 #       integer =   { "0" .. "9" | "a" .. "f" }-
-class data:
+class data(asm.architecture):
     # Captured groups:
-    r = re.compile(r'\s*?(?:'
+    _stmt_regex = re.compile(r'\s*?(?:'
             + r'{(.+?)}|'       # 1 label
             + r'([0-9a-f]+)|'   # 2 integer
             + r'('              # 3 string
@@ -24,22 +24,32 @@ class data:
               + r'(?:"(?:(?<!\\)(?:\\\\)*"|.)*?(?<!\\)(?:\\\\)*")' # regular string
             + r')'              # /string
             + r')(?:\s*,)?|(?:\s*$)')
-    @classmethod
-    def from_string(cls, stmt):
+    _str_regex = re.compile(r'((?:\\\\)+)|' # 1 even number of \
+            + r'\\{(.+?)}|'                 # 2 label expression
+            + r'\\([abfnrtv"])|'            # 3 C escape character
+            + r'\\x([0-9a-f]{2})|'          # 4 byte number
+            + r'\\u([0-9a-f]{4})|'          # 5 unicode codepoint (16-bit)
+            + r'\\U([0-9a-f]{8})')          # 6 unicode codepoint (32-bit)
+    def __init__(self, option_string):
+        self.align = 1
+        self.encoding = 'utf-8'
+        m = re.match(r'(?:\s*(?:align=([0-9]+)|encoding=(utf-8)))+', option_string)
+        if m and m.group(1): self.align = int(m.group(1))
+        if m and m.group(2): self.encoding = m.group(2)
+    def statement(self, stmt):
         value = bytearray()
         # Dictionary of index -> label-expression
         labels = {}
         def parse_string(s):
             nonlocal value, labels
-            # TODO: make encoding an architecture option
-            add_val = lambda x: value.extend(x.encode('utf-8'))
+            add_val = lambda x: value.extend(x.encode(self.encoding))
             raw = False
             if s[0] == 'r':
                 s = s[1:]
                 raw = True
             s = s[1:-1] # string double quotes
             if not raw:
-                s = re.split(r'((?:\\\\)+)|\\{(.+?)}|\\([abfnrtv"])|\\x([0-9a-f]{2})|\\u([0-9a-f]{4})|\\U([0-9a-f]{8})', s)
+                s = self.__class__._str_regex.split(s)
                 for i in range(0, len(s)-1, 7):
                     m = s[i:i+7]
                     add_val(m[0])
@@ -57,7 +67,7 @@ class data:
                     add_val(s[i])
                     if s[i+1]: add_val('"')
             add_val(s[-1])
-        s = cls.r.split(stmt)
+        s = self.__class__._stmt_regex.split(stmt)
         for i in range(0, len(s)-1, 4):   # number_matches = (s - 1)/4
             m = s[i:i+4]
             if m[0]: raise Exception("Invalid data statement: " + stmt)
@@ -66,17 +76,11 @@ class data:
                 labels[len(value)].append(m[1])
             if m[2]:
                 num = int(m[2], 16)
-                align = 1   # TODO: add option in data sections
-                l = (num.bit_length() // (align*8)) + 1
+                l = self.align * (num.bit_length() // (self.align * 8)) + self.align
+                print(l, self.align)
                 value.extend(num.to_bytes(l, 'little'))
             if m[3]: parse_string(m[3])
-        return cls(value, labels)
-    def __init__(self, value, labels):
-        self.value = value
-        self.labels = labels
-    def __str__(self):
-        return str(self.value)
-    __repr__ = __str__
+        return (value, labels)
 
 # Register the 'data' architecture name with ..asm package
 asm.architecture.register('data', data)
