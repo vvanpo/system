@@ -1,12 +1,36 @@
 import asm, re
 
+# TODO: parts of this should be factored out into the asm module
 class statement(bytearray):
-    def __init__(self, *args):
+    def __init__(self, encoding, *args):
         super().__init__(*args)
         # Dictionary of index -> label-expression
         self.labels = {}
+        self.encoding = encoding
     def __repr__(self):
         return super().__repr__()[10:-1] + ' -> ' + str(self.labels)
+    def add_str(self, string): self.extend(string.encode(self.encoding))
+    def add_label(self, label):
+        if len(self) not in self.labels:
+            self.labels[len(self)] = []
+        self.labels[len(self)].append(label)
+    def length(self):
+        # length() returns -1 if the statement is as-yet unresolved
+        if self.labels: return -1
+        return super().__len__()
+    def resolve_labels(self, labels):
+        # labels should be a dict of names -> addresses
+        for i, l_list in self.labels.copy().items():
+            for j in range(len(l_list)):
+                encode = False
+                l = l_list[j]
+                if l[0] == '"':
+                    encode = True
+                    l = l[1:-1]
+                m = re.match(r'[a-f0-9]+|((?![\d-])[\w-]+(?!-))', l)
+                if m: print(m.group(1))
+                #del l_list[j]
+            if not l_list: del self.labels[i]
 
 # data is a simple 'architecture' for storing strings and numbers and the like
 # in binaries
@@ -50,10 +74,9 @@ class data(asm.architecture):
     def __repr__(self):
         return 'data:\n' + ''.join([ '   ' + repr(s) + '\n' for s in self.statements ])
     def add_statement(self, string):
-        value = statement()
+        value = statement(self.encoding)
         def parse_string(s):
             nonlocal value
-            add_val = lambda x: value.extend(x.encode(self.encoding))
             raw = False
             if s[0] == 'r':
                 s = s[1:]
@@ -63,34 +86,31 @@ class data(asm.architecture):
                 s = self.__class__._str_regex.split(s)
                 for i in range(0, len(s)-1, 7):
                     m = s[i:i+7]
-                    add_val(m[0])
-                    if m[1]: add_val(m[1][::2])
-                    if m[2]:
-                        if len(value) not in value.labels: value.labels[len(value)] = []
-                        value.labels[len(value)].append('"' + m[2] + '"')
-                    if m[3]: add_val('\a\b\f\n\r\t\v"'['abfnrtv"'.index(m[3])])
+                    value.add_str(m[0])
+                    if m[1]: value.add_str(m[1][::2])
+                    if m[2]: value.add_label('"' + m[2] + '"')
+                    if m[3]: value.add_str('\a\b\f\n\r\t\v"'['abfnrtv"'.index(m[3])])
                     if m[4]: value.extend(bytes.fromhex(m[4]))
-                    if m[5]: add_val(chr(int(m[5], 16)))
-                    if m[6]: add_val(chr(int(m[6], 16)))
+                    if m[5]: value.add_str(chr(int(m[5], 16)))
+                    if m[6]: value.add_str(chr(int(m[6], 16)))
             else:
                 s = re.split(r'\\(["])', s)
                 for i in range(0, len(s)-1, 2):
-                    add_val(s[i])
-                    if s[i+1]: add_val('"')
-            add_val(s[-1])
+                    value.add_str(s[i])
+                    if s[i+1]: value.add_str('"')
+            value.add_str(s[-1])
         s = self.__class__._stmt_regex.split(string)
         for i in range(0, len(s)-1, 4):   # number_matches = (s - 1)/4
             m = s[i:i+4]
             if m[0]: raise Exception("Invalid data statement: " + string)
-            if m[1]:
-                if len(value) not in value.labels: value.labels[len(value)] = []
-                value.labels[len(value)].append(m[1])
+            if m[1]: value.add_label(m[1])
             if m[2]:
                 num = int(m[2], 16)
                 l = self.align * (num.bit_length() // (self.align * 8)) + self.align
                 value.extend(num.to_bytes(l, self.endian))
             if m[3]: parse_string(m[3])
         self.statements.append(value)
+        value.resolve_labels({})
 
 # Register the 'data' architecture name with ..asm package
 asm.architecture.register('data', data)
