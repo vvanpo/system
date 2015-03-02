@@ -16,8 +16,11 @@ class section:
     def __repr__(self):
         return self.name + ':\n  ' + str(self.labels) + '\n  ' + repr(self.architecture)
     def add_label(self, name):
-        if not re.match(r'[\w-]+$', name):
-            raise Exception("Invalid label: " + self.name + '.' + name)
+        # Labels need to be distinguishable from numbers, which should be defined
+        # by architectures to have the form [0-9]+ or [0-9a-f]+h
+        m = re.match(r'([0-9a-f]+h|[0-9]+)|([\w-]+)$', name)
+        if not m or m.group(1):
+            raise Exception("Invalid label: " + name)
         if name in self.labels:
             raise Exception("Duplicate label: " + self.name + '.' + name)
         self.labels[name] = len(self.architecture.statements)

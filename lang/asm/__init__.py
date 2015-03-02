@@ -18,6 +18,7 @@ from asm.formats import bin_format
 #       ; TODO: need to fix this to accomodate any architecture's assembly
 #       ; Might want to be able to parse labels in operands, and do label arithmetic
 #       instruction =   ? some string ?, newline
+#     ; TODO: identifiers need to be distinguishable from integers
 #     identifier =  letter, { letter | digit }
 #       letter =    "_" | "-" | ? a Unicode code point classified as "Letter" ?
 #       digit =     ? a Unicode code point classified as "Decimal Digit" ?
@@ -56,18 +57,81 @@ class assembly:
                 continue
             if not self.format.sections: raise Exception("No section declarations")
             ## Label
-            # In the case of data statements, it's possible that a ':' could be
-            # found in the data string instead, so we need to make sure it isn't
-            # a string by checking for '"'
-            # BUG: TODO: doesn't check for raw string
-            if w[0][-1] == ':' and w[0][0] != '"':
+            if w[0][-1] == ':':
                 section.add_label(w[0][:-1])
                 l = l[l.index(':')+1:]
                 if len(w) == 1: continue
             ## Instruction
             section.add_statement(l)
         self.format.assemble()
-        print(self.format)
+    def __repr__(self): return repr(self.format)
+    @staticmethod
+    # Label expressions are embedded within statements using {} as delimiters
+    # expression =          add_sub
+    #   add_sub_expr =      ( mult_div, "+", mult_div )
+    #                       | ( [ mult_div ], "-", mult_div ) | mult_div
+    #   mult_div =          ( exp, "*", exp ) | ( exp, "/", exp ) | exp
+    #   exp =               ( bracket, "**", bracket ) | bracket
+    #   bracket =           ( "(", expression, ")" ) | integer | label
+    #   integer =           decimal | hex
+    #     decimal =         { "0" .. "9" }-
+    #     hex =             { "0" .. "9" | "a" .. "f" }-, "h"
+    #   label =             ? identifier as above ?
+    # label_expression() returns an AST unless there are no labels in the expression,
+    # in which case it calculates the value
+    # TODO: clean this up, and put in some error-checking
+    def label_expression(e):
+        def get_token(tokens):
+            if len(tokens) == 1:
+                if type(tokens[0]) == str:
+                    m = re.match(r'([0-9a-f]+h)|([0-9]+)', tokens[0])
+                    if m:
+                        if m.group(1): num = int(tokens[0][:-1], 16)
+                        elif m.group(2): num = int(tokens[0])
+                        return num
+                return tokens[0]
+            def resolve(ops, methods):
+                nonlocal tokens
+                while True:
+                    length = len(tokens)
+                    for i in range(len(tokens)):
+                        if tokens[i] not in ops: continue
+                        j = ops.index(tokens[i])
+                        left = get_token(tokens[i-1])
+                        right = get_token(tokens[i+1])
+                        value = (left, methods[j], right)
+                        if type(left) == int and type(right) == int:
+                            value = left.dict[methods[j]](right)
+                        tokens[i-1:i+1] = [ value ]
+                        break
+                    if len(tokens) == length: break
+            while True:
+                try:
+                    i = tokens.index(')')
+                    j = len(tokens) - tokens[::-1].index('(', len(tokens) - i - 1) - 1
+                    tokens[j:i+1] = [ get_token(tokens[j+1:i]) ]
+                except ValueError: break
+            resolve(['**'], ['__pow__'])
+            resolve(['*','/'], ['__mul__','__floordiv__'])
+            resolve(['+','-'], ['__add__','__sub__'])
+            return tokens
+
+        s = re.split(r'\s*(?:'
+                    + r'([0-9a-f]+h|[0-9]+)|'   # integer
+                    + r'([^\W][\w-]+)|'         # label
+                    + r'(\*\*|\*|/|\+|-)|'      # operator
+                    + r'(\()|'                  # open-bracket
+                    + r'(\))'                   # close-bracket
+                    + r')\s*'
+                    , e)
+        tokens = []
+        for i in range(0, len(s)-1, 6):
+            if s[i] or s[-1]: raise Exception("Invalid label expression: " + e)
+            for j in range(5):
+                if s[i+j+1]: tokens.append(s[i+j+1])
+        print(tokens)
+        tokens = get_token(tokens)
+        print(tokens)
 
 class architecture:
     names = {}

@@ -27,8 +27,6 @@ class statement(bytearray):
                 if l[0] == '"':
                     encode = True
                     l = l[1:-1]
-                m = re.match(r'[a-f0-9]+|((?![\d-])[\w-]+(?!-))', l)
-                if m: print(m.group(1))
                 #del l_list[j]
             if not l_list: del self.labels[i]
 
@@ -45,11 +43,11 @@ class statement(bytearray):
 #         ; and label arithmetic embedded in strings using \{}
 #       ; label arithmetic is also available to specify integers, and doesn't always
 #       ; require actual labels, e.g. {2**8 - 1}
-#       integer =   { "0" .. "9" | "a" .. "f" }-
+#       integer =   { "0" .. "9" }- | ( { "0" .. "9" | "a" .. "f" }-, [ "h" ] )
 class data(asm.architecture):
     _stmt_regex = re.compile(r'\s*?(?:'
             + r'{(.+?)}|'                   # 1 label
-            + r'([0-9a-f]+)|'               # 2 integer
+            + r'([0-9a-f]+h|[0-9]+)|'       # 2 integer
             + r'('                          # 3 string
               + r'r"(?:\\"|.)*?(?<![^\\]\\)"|' # raw string
               + r'(?:"(?:(?<!\\)(?:\\\\)*"|.)*?(?<!\\)(?:\\\\)*")' # regular string
@@ -99,18 +97,22 @@ class data(asm.architecture):
                     value.add_str(s[i])
                     if s[i+1]: value.add_str('"')
             value.add_str(s[-1])
+        def parse_int(s):
+            nonlocal value
+            if s[-1] == 'h': num = int(s[:-1], 16)
+            else: num = int(s)
+            l = self.align * (num.bit_length() // (self.align * 8)) + self.align
+            value.extend(num.to_bytes(l, self.endian))
         s = self.__class__._stmt_regex.split(string)
         for i in range(0, len(s)-1, 4):   # number_matches = (s - 1)/4
             m = s[i:i+4]
             if m[0]: raise Exception("Invalid data statement: " + string)
             if m[1]: value.add_label(m[1])
-            if m[2]:
-                num = int(m[2], 16)
-                l = self.align * (num.bit_length() // (self.align * 8)) + self.align
-                value.extend(num.to_bytes(l, self.endian))
+            if m[2]: parse_int(m[2])
             if m[3]: parse_string(m[3])
+        if s[-1]: raise Exception("Invalid data value: " + s[-1])
         self.statements.append(value)
-        value.resolve_labels({})
+        #value.resolve_labels({})
 
 # Register the 'data' architecture name with ..asm package
 asm.architecture.register('data', data)
