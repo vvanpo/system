@@ -85,50 +85,49 @@ class assembly:
             if not tokens: raise Exception('Malformed expression')
             if len(tokens) == 1: return tokens[0]
             for i in range(len(tokens)):
-                print(tokens)
                 if tokens[i] == '(':
                     queue = 0
                     j = 1
                     for t in tokens[i+1:]:
                         if t == '(': queue += 1
                         if t == ')':
-                            print(i, tokens[i], ':  ', j, tokens[i+j])
                             if queue == 0:
                                 return parse(tokens[:i] + [ parse(tokens[i+1:i+j]) ] + tokens[i+j+1:])
                             queue -= 1
                         j += 1
             for i in range(len(tokens)):
-                left = tokens[:i]
-                right = tokens[i+1:]
                 if tokens[i] in ('+', '-'):
-                    right = parse(right)
+                    left = tokens[:i]
+                    right = parse(tokens[i+1:])
                     if not left and tokens[i] == '-':
-                        if type(right) == int: return 0 - right
-                        return ('-', right)
-                    elif left:
-                        left = parse(left)
-                        if type(left) == int and type(right) == int:
-                            if tokens[i] == '+': return left + right
-                            return left - right
-                        return (left, tokens[i], right)
-                    raise Exception('Malformed expression')
-                if tokens[i] in ('*', '-'):
+                        left = [ 0 ]
                     left = parse(left)
-                    right = parse(right)
+                    if type(left) == int and type(right) == int:
+                        if tokens[i] == '+': return left + right
+                        return left - right
+                    return (left, tokens[i], right)
+                    raise Exception('Malformed expression')
+            for i in range(0, -len(tokens), -1):
+                if tokens[i] in ('*', '/', '%'):
+                    left = parse(tokens[:i])
+                    right = parse(tokens[i+1:])
                     if type(left) == int and type(right) == int:
                         if tokens[i] == '*': return left * right
-                        return left // right
+                        if tokens[i] == '/': return left // right
+                        return left % right
                     return (left, tokens[i], right)
+            for i in range(0, -len(tokens), -1):
                 if tokens[i] == '**':
-                    left = parse(left)
-                    right = parse(right)
+                    left = parse(tokens[:i])
+                    right = parse(tokens[i+1:])
                     if type(left) == int and type(right) == int:
                         return left ** right
+                    return (left, '**', right)
             return tokens
         s = re.split(r'\s*(?:'
                     + r'((?<!\w)(?:[0-9a-f]+h|[0-9]+)(?!\w))|'   # integer
                     + r'((?<!\w)[\w][\w-]*)|'   # label
-                    + r'(\*\*|\*|/|\+|-)|'      # operator
+                    + r'(\*\*|\*|/|\+|%|-)|'    # operator
                     + r'(\()|'                  # open-bracket
                     + r'(\))'                   # close-bracket
                     + r')\s*'
@@ -141,9 +140,7 @@ class assembly:
             tags = (integer, other, other, other, other)
             for j in range(5):
                 if s[i+j+1]: tokens.append(tags[j](s[i+j+1]))
-        print(tokens)
-        tokens = parse(tokens)
-        print(tokens)
+        return parse(tokens)
 
 class architecture:
     names = {}
