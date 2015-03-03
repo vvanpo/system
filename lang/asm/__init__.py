@@ -81,56 +81,68 @@ class assembly:
     # in which case it calculates the value
     # TODO: clean this up, and put in some error-checking
     def label_expression(e):
-        def get_token(tokens):
-            if len(tokens) == 1:
-                if type(tokens[0]) == str:
-                    m = re.match(r'([0-9a-f]+h)|([0-9]+)', tokens[0])
-                    if m:
-                        if m.group(1): num = int(tokens[0][:-1], 16)
-                        elif m.group(2): num = int(tokens[0])
-                        return num
-                return tokens[0]
-            def resolve(ops, methods):
-                nonlocal tokens
-                while True:
-                    length = len(tokens)
-                    for i in range(len(tokens)):
-                        if tokens[i] not in ops: continue
-                        j = ops.index(tokens[i])
-                        left = get_token(tokens[i-1])
-                        right = get_token(tokens[i+1])
-                        value = (left, methods[j], right)
+        def parse(tokens):
+            if not tokens: raise Exception('Malformed expression')
+            if len(tokens) == 1: return tokens[0]
+            for i in range(len(tokens)):
+                print(tokens)
+                if tokens[i] == '(':
+                    queue = 0
+                    j = 1
+                    for t in tokens[i+1:]:
+                        if t == '(': queue += 1
+                        if t == ')':
+                            print(i, tokens[i], ':  ', j, tokens[i+j])
+                            if queue == 0:
+                                return parse(tokens[:i] + [ parse(tokens[i+1:i+j]) ] + tokens[i+j+1:])
+                            queue -= 1
+                        j += 1
+            for i in range(len(tokens)):
+                left = tokens[:i]
+                right = tokens[i+1:]
+                if tokens[i] in ('+', '-'):
+                    right = parse(right)
+                    if not left and tokens[i] == '-':
+                        if type(right) == int: return 0 - right
+                        return ('-', right)
+                    elif left:
+                        left = parse(left)
                         if type(left) == int and type(right) == int:
-                            value = left.dict[methods[j]](right)
-                        tokens[i-1:i+1] = [ value ]
-                        break
-                    if len(tokens) == length: break
-            while True:
-                try:
-                    i = tokens.index(')')
-                    j = len(tokens) - tokens[::-1].index('(', len(tokens) - i - 1) - 1
-                    tokens[j:i+1] = [ get_token(tokens[j+1:i]) ]
-                except ValueError: break
-            resolve(['**'], ['__pow__'])
-            resolve(['*','/'], ['__mul__','__floordiv__'])
-            resolve(['+','-'], ['__add__','__sub__'])
+                            if tokens[i] == '+': return left + right
+                            return left - right
+                        return (left, tokens[i], right)
+                    raise Exception('Malformed expression')
+                if tokens[i] in ('*', '-'):
+                    left = parse(left)
+                    right = parse(right)
+                    if type(left) == int and type(right) == int:
+                        if tokens[i] == '*': return left * right
+                        return left // right
+                    return (left, tokens[i], right)
+                if tokens[i] == '**':
+                    left = parse(left)
+                    right = parse(right)
+                    if type(left) == int and type(right) == int:
+                        return left ** right
             return tokens
-
         s = re.split(r'\s*(?:'
-                    + r'([0-9a-f]+h|[0-9]+)|'   # integer
-                    + r'([^\W][\w-]+)|'         # label
+                    + r'((?<!\w)(?:[0-9a-f]+h|[0-9]+)(?!\w))|'   # integer
+                    + r'((?<!\w)[\w][\w-]*)|'   # label
                     + r'(\*\*|\*|/|\+|-)|'      # operator
                     + r'(\()|'                  # open-bracket
                     + r'(\))'                   # close-bracket
                     + r')\s*'
                     , e)
+        integer = lambda s: int(s[:-1], 16) if re.match(r'[0-9a-f]+h', s) else int(s) if re.match(r'[0-9]+', s) else None
+        other = lambda s: s
         tokens = []
         for i in range(0, len(s)-1, 6):
             if s[i] or s[-1]: raise Exception("Invalid label expression: " + e)
+            tags = (integer, other, other, other, other)
             for j in range(5):
-                if s[i+j+1]: tokens.append(s[i+j+1])
+                if s[i+j+1]: tokens.append(tags[j](s[i+j+1]))
         print(tokens)
-        tokens = get_token(tokens)
+        tokens = parse(tokens)
         print(tokens)
 
 class architecture:
