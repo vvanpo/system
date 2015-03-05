@@ -81,8 +81,17 @@ class assembly:
     # in which case it calculates the value
     # TODO: clean this up, and put in some error-checking
     def label_expression(e):
+        add = int.__add__
+        sub = int.__sub__
+        mul = int.__mul__
+        div = int.__floordiv__
+        mod = int.__mod__
+        pow = int.__pow__
+        ops = ((add, sub), (mul, div, mod), (pow,))
         def parse(tokens):
-            if not tokens: raise Exception('Malformed expression')
+            nonlocal ops
+            # TODO: this return statement allows unary '-' operator to exist, but we need to disallow unary versions of the other operators
+            if not tokens: return 0
             if len(tokens) == 1: return tokens[0]
             for i in range(len(tokens)):
                 if tokens[i] == '(':
@@ -95,49 +104,31 @@ class assembly:
                                 return parse(tokens[:i] + [ parse(tokens[i+1:i+j]) ] + tokens[i+j+1:])
                             queue -= 1
                         j += 1
-            for i in range(len(tokens)):
-                if tokens[i] in ('+', '-'):
-                    left = tokens[:i]
-                    right = parse(tokens[i+1:])
-                    if not left and tokens[i] == '-':
-                        left = [ 0 ]
-                    left = parse(left)
-                    if type(left) == int and type(right) == int:
-                        if tokens[i] == '+': return left + right
-                        return left - right
-                    return (left, tokens[i], right)
-                    raise Exception('Malformed expression')
-            for i in range(0, -len(tokens), -1):
-                if tokens[i] in ('*', '/', '%'):
-                    left = parse(tokens[:i])
-                    right = parse(tokens[i+1:])
-                    if type(left) == int and type(right) == int:
-                        if tokens[i] == '*': return left * right
-                        if tokens[i] == '/': return left // right
-                        return left % right
-                    return (left, tokens[i], right)
-            for i in range(0, -len(tokens), -1):
-                if tokens[i] == '**':
-                    left = parse(tokens[:i])
-                    right = parse(tokens[i+1:])
-                    if type(left) == int and type(right) == int:
-                        return left ** right
-                    return (left, '**', right)
-            return tokens
+            for group in ops:
+                for i in range(0, -len(tokens), -1):
+                    if tokens[i] in group:
+                        left = parse(tokens[:i])
+                        right = parse(tokens[i+1:])
+                        if type(left) == int and type(right) == int:
+                            return tokens[i](left, right)
+                        return (left, tokens[i], right)
         s = re.split(r'\s*(?:'
                     + r'((?<!\w)(?:[0-9a-f]+h|[0-9]+)(?!\w))|'   # integer
                     + r'((?<!\w)[\w][\w-]*)|'   # label
-                    + r'(\*\*|\*|/|\+|%|-)|'    # operator
+                    + r'(\*\*|\*|/|%|\+|-)|'    # operator
                     + r'(\()|'                  # open-bracket
                     + r'(\))'                   # close-bracket
                     + r')\s*'
                     , e)
         integer = lambda s: int(s[:-1], 16) if re.match(r'[0-9a-f]+h', s) else int(s) if re.match(r'[0-9]+', s) else None
         other = lambda s: s
+        operator = lambda s: add if s == '+' else sub if s == '-' else mul if s == '*' \
+                        else div if s == '/' else mod if s == '%' else pow if s == '**' \
+                        else None
         tokens = []
         for i in range(0, len(s)-1, 6):
             if s[i] or s[-1]: raise Exception("Invalid label expression: " + e)
-            tags = (integer, other, other, other, other)
+            tags = (integer, other, operator, other, other)
             for j in range(5):
                 if s[i+j+1]: tokens.append(tags[j](s[i+j+1]))
         return parse(tokens)
