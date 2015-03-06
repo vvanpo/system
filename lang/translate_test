@@ -21,4 +21,3 @@ section data data align=64
 """)
 
 print(a)
-print(a.label_expression("label + (-5a5h) + 5 ** ((2+ 44h + 44) / 2)/2 % 512"))
