@@ -12,11 +12,11 @@ class label_expression:
     #     decimal =         { "0" .. "9" }-
     #     hex =             { "0" .. "9" | "a" .. "f" }-, "h"
     #   label =             ? identifier as above ?
-    # label_expressions are stored as an AST unless there are no labels in the expression,
-    # in which case it calculates the value
+    # label_expressions are stored as an AST
     # TODO: clean this up, and put in some error-checking
     def __init__(self, string, encoding):
         self.encoding = encoding
+        self.labels = set() # Set of labels in the expression, if any
         add = int.__add__
         sub = int.__sub__
         mul = int.__mul__
@@ -50,13 +50,16 @@ class label_expression:
                         return (left, tokens[i], right)
         s = re.split(r'\s*(?:'
                     + r'((?<!\w)(?:[0-9a-f]+h|[0-9]+)(?!\w))|' # integer
-                    + r'((?<!\w)\w[\w.-]*)|'   # label
+                    + r'((?<!\w)\w[\w.-]*)|'    # label
                     + r'(\*\*|\*|/|%|\+|-)|'    # operator
                     + r'(\()|'                  # open-bracket
                     + r'(\))'                   # close-bracket
                     + r')\s*'
                     , string)
         integer = lambda s: int(s[:-1], 16) if re.match(r'[0-9a-f]+h', s) else int(s) if re.match(r'[0-9]+', s) else None
+        def label(s):
+            self.labels.add(s)
+            return s
         other = lambda s: s
         operator = lambda s: add if s == '+' else sub if s == '-' else mul if s == '*' \
                         else div if s == '/' else mod if s == '%' else pow if s == '**' \
@@ -64,16 +67,10 @@ class label_expression:
         tokens = []
         for i in range(0, len(s)-1, 6):
             if s[i] or s[-1]: raise Exception("Invalid label expression: " + e)
-            tags = (integer, other, operator, other, other)
+            tags = (integer, label, operator, other, other)
             for j in range(5):
                 if s[i+j+1]: tokens.append(tags[j](s[i+j+1]))
         self.expr = parse(tokens)
-        ###TEST########################################
-        print(self, self.resolve({
-            "_end": 0, "testlabel": 1, "data.end": 2, "code.end": 3, "data.hello": 4,
-            "hello": 5, "code.testlabel": 6, "a": 7,
-            }))
-        ##################################################
     def __repr__(self):  return repr(self.expr)
     def resolve(self, labels):
         # labels should be a dict of names -> addresses
@@ -87,7 +84,12 @@ class label_expression:
             if type(tup) == int: return tup
             if type(tup) != tuple or len(tup) != 3: raise Exception("Invalid label expression")
             return tup[1](recurse(tup[0]), recurse(tup[2]))
-        return recurse(self.expr)
+        num = recurse(self.expr)
+        if self.encoding: return str(num).encode(self.encoding)
+        else: return num
+    # Returns a list of embedded labels in their canonical form ('section.label')
+    def labels(self):
+        return self.labels
 
 # TODO: parts of this should be factored out into the asm module
 class statement(bytearray):
@@ -111,7 +113,7 @@ class statement(bytearray):
         return super().__len__()
     def resolve_labels(self, labels):
         # labels should be a dict of names -> addresses
-        for i, l_list in self.labels.copy().items():
+        for i, l_list in self.label_exprs.copy().items():
             for j in range(len(l_list)):
                 del l_list[j]
             if not l_list: del self.labels[i]
@@ -198,7 +200,16 @@ class data(asm.architecture):
             if m[3]: parse_string(m[3])
         if s[-1]: raise Exception("Invalid data value: " + s[-1])
         self.statements.append(value)
-        #value.resolve_labels({})
+    def new_label(self):
+        statements = self.statements[:]
+        def get_length():
+            nonlocal statements
+            l = 0
+            for s in statements:
+                if s.length() == -1: return -1
+                l += s.length()
+            return l
+        return get_length
 
 # Register the 'data' architecture name with ..asm package
 asm.architecture.register('data', data)

@@ -18,13 +18,16 @@ class section:
     def add_label(self, name):
         # Labels need to be distinguishable from numbers, which should be defined
         # by architectures to have the form [0-9]+ or [0-9a-f]+h
-        m = re.match(r'([0-9a-f]+h|[0-9]+)|([\w-]+)$', name)
+        m = re.match(r'([0-9a-f]+h|[0-9]+)|(\w[\w-]*)$', name)
         if not m or m.group(1):
             raise Exception("Invalid label: " + name)
         if name in self.labels:
             raise Exception("Duplicate label: " + self.name + '.' + name)
-        self.labels[name] = len(self.architecture.statements)
+        self.labels[name] = self.architecture.new_label()
     def add_statement(self, string): self.architecture.add_statement(string)
+    def assemble_object(self):
+        for s in self.architecture.statements:
+            pass
 
 class bin_format:
     names = {}

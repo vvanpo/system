@@ -20,6 +20,7 @@ class bin(bin_format):
     def assemble(self):
         for i in range(len(self.sections)):
             s = self.sections[i]
+            labels = s.assemble_object()
 
 bin.register('bin')
 
