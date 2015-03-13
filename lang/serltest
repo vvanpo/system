@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+import serl
+
+f = serl.parse(r"""
+hello
+? world
+  now
+: hello again
+People:
+  - name:           Victor van Poppelen
+    birthdate:      1991-02-14
+    birthplace:     Houten, NL
+  - name:           Alexander van Poppelen
+    birthdate:      1989-07-29
+    birthplace:     Nieuwegein, The Netherlands
+  - name:       Jacqueline de Bruin
+    birth-name: Jacqueline van Poppelen
+    birthdate:  1985-09-07
+    nick-names: [ Jackie, Jacko, Jackie Brown ]
+——
+""")
+
+print(f)
