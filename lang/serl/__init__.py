@@ -1,9 +1,15 @@
-import re, os
+import re
+
+# An order map has all the same operations as a regular list, but items that are
+# pairs can be indexed by their key (which returns their value), or their index
+# (which returns the key-value pair)
+class omap(list, dict):
+    pass
 
 # serl: Serialization Language
 # A data format that can map to sets, dicts, lists, etc. and is human-readable.
 # The character set, for now, UTF-8 by default.
-#   file = list? end-of-file
+#   start = list? end-of-file
 #   end-of-file = "——" newline
 #   list = plain-list | dashed-list
 #   plain-list = (item newline)+
