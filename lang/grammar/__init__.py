@@ -13,22 +13,28 @@
 # repeats), and grouping (using parentheses).  Symbol concatenation is achieved with
 # whitespace, and terminals are indicated with double quotes (although a character set
 # must be defined beforehand).
-#   start = production+
-#     production = string? space non-terminal space string? "=" string | empty-string newline
-#       string = space? group | concat space?
-#         group = ("(" space? group | concat space? ")") | symbol
-#                   | (group (zero-or-one | zero-or-more | one-or-more | range))
-#           symbol = terminal | non-terminal
+#   S = production+
+#     production = _string? _space non-terminal _space _string? "=" \
+#                   _string | empty-string _newline
+#       _string = _space? group | concat _space?
+#         group = ("(" _space? group | concat _space? ")") | _symbol
+#                   | (group (zero-or-one | zero-or-more | one-or-more | _range))
+#           _symbol = terminal | non-terminal
 #           zero-or-one = "?"
 #           zero-or-more = "*"
 #           one-or-more = "+"
-#           range = "{" digit | (digit+ "," digit*) | ("," digit+) "}"
-#         concat = (group | option (space group | option)+)
-#           option = (group (space "|" space group)+) | symbol
-#       space = " "+
-#         ###escaped-newline = "\" newline
-#       non-terminal = "_"? (letter | digit) (letter | digit | "-")*
-#       empty-string = space? "ε" space?
+#           _range = "{" range-exact | (range-low "," range-high?) | ("," range-high) "}"
+#             range-exact = _digit+
+#             range-low = _digit+
+#             range-high = _digit+
+#         concat = group | option (_space group | option)+
+#           option = group (_space? "|" _space? group)+
+#       _space = " "+
+#         ###_escaped-newline = "\" _newline
+#       non-terminal = "_"? (_letter | _digit) (_letter | _digit | "-")*
+#       terminal = ('"' _character '"') | _hex
+#         _hex = ("0" .. "9" | "a" .. "f")+
+#       empty-string = _space? "ε" _space?
 # When a grammar is processed, non-terminals are either can be either "capturing"
 # if they begin with a letter, or "non-capturing" if they begin with an underscore.
 # Capturing non-terminals will be used by the generated parser to return matching
@@ -39,7 +45,7 @@
 # into.
 
 class grammar:
-    def __init__(self, source):
+    def __init__(self, source, character_set='utf-8'):
         pass
     def dump(self, simple=False):
         pass

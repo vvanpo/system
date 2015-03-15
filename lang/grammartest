@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import grammar
 
-g = grammar("")
+g = grammar("""
+S = production S
+production = non-terminal "=" _string | empty-string _newline
+empty-string = 03b5
+_newline = 0a
+""")
 
 print(g.dump(True))
