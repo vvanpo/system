@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+import grammar
+
+g = grammar("")
+
+print(g.dump(True))
