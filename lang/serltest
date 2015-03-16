@@ -21,3 +21,7 @@ People:
 """)
 
 print(f)
+
+o = serl.map(('a', 'b', {'key-c': 'c'}, 'd', {'key-only'}, 'f'))
+
+print(o)
