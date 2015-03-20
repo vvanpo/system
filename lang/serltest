@@ -2,10 +2,13 @@
 import serl
 
 f = serl.parse(r"""
-hello
-? world
-  now
-: hello again
+item1
+? key2.item1
+  key2.item2
+  : - value2.item1
+    - - ? value2.item2.item1.key1.item1
+          value2.item2.item1.key1.item2
+      - value2.item2.item2
 People:
   - name:           Victor van Poppelen
     birthdate:      1991-02-14
@@ -22,6 +25,6 @@ People:
 
 print(f)
 
-o = serl.map(('a', 'b', {'key-c': 'c'}, 'd', {'key-only'}, 'f'))
-
+o = serl.omap(('a', 'b', {'key-c': 'c'}, 'd', {'key-only'}, 'f'))
+print(serl.dump(o))
 print(o)
