@@ -24,12 +24,13 @@ class pair:
 #     omap = plain-item+ | dashed-item+
 #       plain-item = pair | scalar
 #       dashed-item = "- " plain-item | (complex-key (":" value)?) | embedded-omap
-#     embedded-omap = (dashed-item (INDENT dashed-item+)?)
-#                       | (plain-item INDENT plain-item+)
-#     pair
-#     scalar
-#     complex-key
-#     value
+#     embedded-omap = (dashed-item (INDENT dashed-item+ DEDENT)?)
+#                       | (plain-item INDENT plain-item+ DEDENT)
+#     pair = key ":" value
+#       key = scalar-inline
+#       value = scalar
+#     scalar-inline = 
+#     complex-key = 
 class file:
     def __init__(self):
         self.root = omap()
@@ -47,25 +48,36 @@ class file:
         # current indent position
         indent = 0
         tokens = (
+            'ENDOFFILE',
             'NEWLINE',
             'INDENT',
             'DEDENT',
             )
-        t_ignore_all = r'.+'
-        def t_NEWLINE(t):
-            r'\n(\ \ )*'
+        t_ignore_all = r'.+?'
+        def t_INDENT(t):
+            r'\n(\ \ )*(?=[^ \n])'
             nonlocal indent
             current = len(t.value)//2
             if current != indent:
                 diff = current - indent
                 if diff < 0: t.type = 'DEDENT'
-                if diff > 0: t.type = 'INDENT'
                 if abs(diff) > 1:
                     indent += diff//abs(diff)
-                    t.lexpos -= len(t.value)
+                    t.lexer.lexpos = t.lexpos   # Re-lex token
                     return t
                 indent = current
+            else: t.type = 'NEWLINE'
             t.lexer.lineno += 1
+            return t
+        def t_NEWLINE(t):
+            r'\n(\ \ )*'
+            t.lexer.lineno += 1
+            return t
+        def t_ENDOFFILE(t):
+            r'——\n'
+            nonlocal string
+            # stop lexing
+            t.lexer.lexpos = len(string)
             return t
         lexer = lex.lex()
         lexer.input(string)

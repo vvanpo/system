@@ -3,12 +3,13 @@ import serl
 
 f = serl.parse(r"""
 item1
-? key2.item1
-  key2.item2
-  : - value2.item1
-    - - ? value2.item2.item1.key1.item1
-          value2.item2.item1.key1.item2
-      - value2.item2.item2
+? item2.key1.item1
+  item2.key1.item2
+  : - item2.value1.item1
+    - - ? item2.value1.item2.item1.key1.item1
+          item2.value1.item2.item1.key1.item2
+      - item2.value1.item2.item2
+key3: value3
 People:
   - name:           Victor van Poppelen
     birthdate:      1991-02-14
@@ -21,6 +22,8 @@ People:
     birthdate:  1985-09-07
     nick-names: [ Jackie, Jacko, Jackie Brown ]
 ——
+ 
+  
 """)
 
 print(f)
