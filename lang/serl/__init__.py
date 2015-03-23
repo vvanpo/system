@@ -19,8 +19,9 @@ class pair:
 # The character set, for now, UTF-8 by default.
 # For now, indent tokens are handled outside the grammar, until I can figure out
 # how to write a proper context-sensitive grammar, and corresponding parser.
-#   S = omap? end-of-file
-#     end-of-file = "——" NEWLINE
+# Reference for CSGs: http://www.diku.dk/hjemmesider/ansatte/henglein/papers/chomsky1959.pdf
+#   S = omap? ENDOFFILE
+#     ENDOFFILE = "——" NEWLINE
 #     omap = plain-item+ | dashed-item+
 #       plain-item = pair | scalar
 #       dashed-item = "- " plain-item | (complex-key (":" value)?) | embedded-omap
@@ -53,7 +54,7 @@ class file:
             'INDENT',
             'DEDENT',
             )
-        t_ignore_all = r'.+?'
+        t_ignore_z = r'.+?'
         def t_INDENT(t):
             r'\n(\ \ )*(?=[^ \n])'
             nonlocal indent
@@ -63,9 +64,10 @@ class file:
                 if diff < 0: t.type = 'DEDENT'
                 if abs(diff) > 1:
                     indent += diff//abs(diff)
+                    t.value = indent
                     t.lexer.lexpos = t.lexpos   # Re-lex token
                     return t
-                indent = current
+                t.value = indent = current
             else: t.type = 'NEWLINE'
             t.lexer.lineno += 1
             return t
@@ -76,8 +78,7 @@ class file:
         def t_ENDOFFILE(t):
             r'——\n'
             nonlocal string
-            # stop lexing
-            t.lexer.lexpos = len(string)
+            t.lexer.lexpos = len(string)    # stop lexing
             return t
         lexer = lex.lex()
         lexer.input(string)
