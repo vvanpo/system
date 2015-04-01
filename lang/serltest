@@ -26,6 +26,7 @@ People:
 
 print(f)
 
-o = serl.omap(('a', 'b', {'key-c': 'c'}, 'd', {'key-only'}, 'f'))
-print(serl.dump(o))
+o = ('a',)
+o = serl.omap(o)
 print(o)
+print(serl.dump(o))

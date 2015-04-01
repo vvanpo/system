@@ -1,0 +1,37 @@
+Grammar module:
+
+1   The module accepts an input string conforming to a grammar notation, and
+    returns a grammar object.
+    1.1 Grammar notation allows for expression of any unrestricted grammar
+        (unlike BNF), and has various optional shorthands to simply description
+        (think EBNF, but with shorthands for non-CFG grammars too).
+        E.g. alternatives ('|'), ordered alternatives ('||'), optionals ('?'),
+            zero-or-more ('*'), one-or-more ('+'), grouping ('()'), m-to-n
+            ('{m,n}'), back-references ('/#'), look-ahead/look-behind, etc.
+    1.2 The notation is a superset of simple rewrite-rules as described by
+        Chomsky.  However, they have a straight-forward mapping to sequences of
+        such rewrite-rules.
+    1.3 The notation allows for specifying semantic structure by prefixing
+        ('!') specific non-terminals.
+2   The object constructor transforms the input into an unrestricted canonical
+    form.  Any equivalent grammars (i.e. grammars that generate the same
+    language) have the same canonical form (hence replacing names of non-
+    terminals must be deterministic).  Methods for comparing grammar objects
+    make the distinction between weakly and strongly equivalent (i.e. where the
+    semantic structure is also equivalent).
+3   Grammar objects can classify themselves according to the Chomsky hierarchy,
+    as well as various other subsets of these types (boolean, indexed, etc.).
+    Further, the productions specifying the object can be partitioned into
+    groups according to this hierarchy.
+4   The generative grammar describing the object can be transformed into an
+    analytic grammar.  The corresponding analytic grammar should also have a
+    canonical form.
+5   Ambiguities should be categorized as either generative (think whitespace
+    between tokens in most programming languages, or the many ways to say the
+    same thing in English), or analytic (think ambiguous sentences in English).
+    Methods are available to highlight which sets of productions are responsible
+    for each ambiguity.
+6   By using the classifications determined in [3], methods are available for
+    analysis ('parsing'), or generation.  If the grammar contains no
+    ambiguities, these methods are inverses of one another.
+
