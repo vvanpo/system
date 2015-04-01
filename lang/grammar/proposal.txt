@@ -9,8 +9,9 @@ Grammar module:
             zero-or-more ('*'), one-or-more ('+'), grouping ('()'), m-to-n
             ('{m,n}'), back-references ('/#'), look-ahead/look-behind, etc.
     1.2 The notation is a superset of simple rewrite-rules as described by
-        Chomsky.  However, they have a straight-forward mapping to sequences of
-        such rewrite-rules.
+        Chomsky (i.e. rules that allow for concatenation of terminals and non-
+        terminals, but nothing else).  However, they have a straight-forward
+        mapping to sequences of such rewrite-rules.
     1.3 The notation allows for specifying semantic structure by prefixing
         ('!') specific non-terminals.
 2   The object constructor transforms the input into an unrestricted canonical
