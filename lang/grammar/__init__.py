@@ -38,7 +38,11 @@
 from ply import lex, yacc
 
 class grammar:
-    def __init__(self, input, character_set='utf-8'):
+    def utf8map(value):
+        if type(value) == str: return ord(value)
+        elif type(value) == int: return chr(value)
+        else: raise Exception('Invalid utf8 character')
+    def __init__(self, input, terminal_map=utf8map):
         tokens = ('EMPTYSTRING', 'EQUALS', 'NEWLINE', 'NONTERMINAL', 'TERMINAL')
         t_ignore_space = r'\ +'
         t_EQUALS = r'='
@@ -51,10 +55,36 @@ class grammar:
             return t
         def t_TERMINAL(t):
             r'(".")|([0-9a-f]+)(?!\w)'
-            if t.value[0] == '"': t.value = ord(t.value[1])
+            if t.value[0] == '"': t.value = terminal_map(t.value[1])
             else: t.value = int(t.value, 16)
             return t
+        def p_S(p):
+            '''S : production S
+                 | NEWLINE S
+                 | production
+                 | NEWLINE'''
+            if len(p) == 3:
+                if p[1] == '\n': p[0] = p[2]
+                else: p[0] = [ p[1] ] + p[2]
+            else:
+                if p[1] == '\n': p[0] = [ ]
+                else: p[0] = [ p[1] ]
+        def p_production(p):
+            'production : A EQUALS A NEWLINE'
+            p[0] = (p[1], p[3])
+        def p_A(p):
+            '''A : string
+                 | EMPTYSTRING'''
+            p[0] = p[1]
+        def p_string_nonterminal_recursive(p):
+            '''string : NONTERMINAL string
+                      | TERMINAL string
+                      | NONTERMINAL
+                      | TERMINAL'''
+            if len(p) == 3: p[0] = [ p[1] ] + p[2]
+            else: p[0] = [ p[1] ]
         lexer = lex.lex()
-        lexer.input(input)
-        for t in lexer: print(t)
-
+        parser = yacc.yacc()
+        self.productions = parser.parse(input)
+    def canonical(self):
+        pass

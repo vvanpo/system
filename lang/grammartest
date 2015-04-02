@@ -3,7 +3,9 @@ import grammar
 
 g = grammar.grammar("""
 S = production S
+S = newline S
 S = production
+S = newline
   production = A "=" A newline
     A = string
       string = non-terminal string
@@ -12,6 +14,7 @@ S = production
       string = terminal
     A = empty-string
       empty-string = 03b5
+    newline = 0a newline
     newline = 0a
 """)
 
