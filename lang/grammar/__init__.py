@@ -39,18 +39,18 @@ from ply import lex, yacc
 
 class grammar:
     def __init__(self, input, character_set='utf-8'):
-        tokens = ('EMPTYSTRING', 'EQUALS', 'TERMINAL', 'NONTERMINAL', 'NEWLINE')
-        t_EMPTYSTRING = r'ε'
+        tokens = ('EMPTYSTRING', 'EQUALS', 'NEWLINE', 'NONTERMINAL', 'TERMINAL')
+        t_ignore_space = r'\ +'
         t_EQUALS = r'='
         t_NONTERMINAL = r'\w[\w-]*'
-        t_ignore_space = r'\ +'
+        t_EMPTYSTRING = r'ε'
         def t_NEWLINE(t):
             r'\\?\n'
             t.lexer.lineno += 1
             if t.value == '\\\n': return None
             return t
         def t_TERMINAL(t):
-            r'(".")|([0-9a-f]+)'
+            r'(".")|([0-9a-f]+)(?!\w)'
             if t.value[0] == '"': t.value = ord(t.value[1])
             else: t.value = int(t.value, 16)
             return t
