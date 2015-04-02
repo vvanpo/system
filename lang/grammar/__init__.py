@@ -42,7 +42,7 @@ class grammar:
         if type(value) == str: return ord(value)
         elif type(value) == int: return chr(value)
         else: raise Exception('Invalid utf8 character')
-    def __init__(self, input, terminal_map=utf8map):
+    def __init__(self, input, terminal_map=utf8map, start='S'):
         tokens = ('EMPTYSTRING', 'EQUALS', 'NEWLINE', 'NONTERMINAL', 'TERMINAL')
         t_ignore_space = r'\ +'
         t_EQUALS = r'='
@@ -54,9 +54,9 @@ class grammar:
             if t.value == '\\\n': return None
             return t
         def t_TERMINAL(t):
-            r'(".")|([0-9a-f]+)(?!\w)'
+            r'(".")|(0x[0-9a-f]+)'
             if t.value[0] == '"': t.value = terminal_map(t.value[1])
-            else: t.value = int(t.value, 16)
+            else: t.value = int(t.value[2:], 16)
             return t
         def p_S(p):
             '''S : production S
@@ -70,13 +70,10 @@ class grammar:
                 if p[1] == '\n': p[0] = [ ]
                 else: p[0] = [ p[1] ]
         def p_production(p):
-            'production : A EQUALS A NEWLINE'
+            '''production : string EQUALS string NEWLINE
+                          | string EQUALS EMPTYSTRING NEWLINE'''
             p[0] = (p[1], p[3])
-        def p_A(p):
-            '''A : string
-                 | EMPTYSTRING'''
-            p[0] = p[1]
-        def p_string_nonterminal_recursive(p):
+        def p_string(p):
             '''string : NONTERMINAL string
                       | TERMINAL string
                       | NONTERMINAL
@@ -86,5 +83,12 @@ class grammar:
         lexer = lex.lex()
         parser = yacc.yacc()
         self.productions = parser.parse(input)
+    def __repr__(self):
+        productions = ''
+        for p in self.productions:
+            lhs = ' '.join([ s if type(s) == str else hex(s) for s in p[0] ])
+            rhs = ' '.join([ s if type(s) == str else hex(s) for s in p[1] ])
+            productions += lhs + ' = ' + rhs + '\n'
+        return productions
     def canonical(self):
         pass

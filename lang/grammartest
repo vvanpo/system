@@ -6,15 +6,15 @@ S = production S
 S = newline S
 S = production
 S = newline
-  production = A "=" A newline
-    A = string
-      string = non-terminal string
-      string = terminal string
-      string = non-terminal
-      string = terminal
-    A = empty-string
-      empty-string = 03b5
-    newline = 0a newline
-    newline = 0a
+  production = string "=" string newline
+  production = string "=" empty-string newline
+    string = non-terminal string
+    string = terminal string
+    string = non-terminal
+    string = terminal
+    empty-string = 0x3b5
+    newline = 0xa newline
+    newline = 0xa
 """)
 
+print(g)
