@@ -37,16 +37,23 @@
 
 from ply import lex, yacc
 
+# Grammar is determined by G = (N, T, P, S)
+# The constructor builds this set from the input, and transforms N,P into a
+# canonical form.  The hash value of grammar objects are hence based on N, T,
+# and P.
 class grammar:
     def utf8map(value):
         if type(value) == str: return ord(value)
         elif type(value) == int: return chr(value)
         else: raise Exception('Invalid utf8 character')
-    def __init__(self, input, terminal_map=utf8map, start='S'):
+    def __init__(self, input, start='S', terminal_map=utf8map):
+        self.N = set()
+        self.T = set()
+        self.P = []
+        self.S = start
         tokens = ('EMPTYSTRING', 'EQUALS', 'NEWLINE', 'NONTERMINAL', 'TERMINAL')
         t_ignore_space = r'\ +'
         t_EQUALS = r'='
-        t_NONTERMINAL = r'\w[\w-]*'
         t_EMPTYSTRING = r'ε'
         def t_NEWLINE(t):
             r'\\?\n'
@@ -57,22 +64,22 @@ class grammar:
             r'(".")|(0x[0-9a-f]+)'
             if t.value[0] == '"': t.value = terminal_map(t.value[1])
             else: t.value = int(t.value[2:], 16)
+            self.T.add(t.value)
+            return t
+        def t_NONTERMINAL(t):
+            r'\w[\w-]*'
+            self.N.add(t.value)
             return t
         def p_S(p):
             '''S : production S
                  | NEWLINE S
                  | production
                  | NEWLINE'''
-            if len(p) == 3:
-                if p[1] == '\n': p[0] = p[2]
-                else: p[0] = [ p[1] ] + p[2]
-            else:
-                if p[1] == '\n': p[0] = [ ]
-                else: p[0] = [ p[1] ]
         def p_production(p):
             '''production : string EQUALS string NEWLINE
                           | string EQUALS EMPTYSTRING NEWLINE'''
             p[0] = (p[1], p[3])
+            self.P.append(p[0])
         def p_string(p):
             '''string : NONTERMINAL string
                       | TERMINAL string
@@ -82,13 +89,23 @@ class grammar:
             else: p[0] = [ p[1] ]
         lexer = lex.lex()
         parser = yacc.yacc()
-        self.productions = parser.parse(input)
+        parser.parse(input)
     def __repr__(self):
-        productions = ''
-        for p in self.productions:
+        P = ''
+        for p in self.P:
             lhs = ' '.join([ s if type(s) == str else hex(s) for s in p[0] ])
             rhs = ' '.join([ s if type(s) == str else hex(s) for s in p[1] ])
-            productions += lhs + ' = ' + rhs + '\n'
-        return productions
+            P += lhs + ' = ' + rhs + '\n'
+        return P
+    # The wiki page on 'Kuroda normal form' mentions that any unrestricted language
+    # is weakly equivalent to one where all rules are of the form:
+    #   1.  AB = CD
+    #   2.  A = BC
+    #   3.  A = a
+    #   4.  A = ε
+    # If rule type 4. is ommitted, we have a normal form for context-sensitive
+    # languages, whereas if only rule 1. is ommitted, we gain a normal form for
+    # context-free languages.
     def canonical(self):
         pass
+
