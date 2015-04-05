@@ -37,14 +37,17 @@
 
 from ply import lex, yacc
 
+class terminal(int):
+    pass
+
 # Grammar is determined by G = (N, T, P, S)
 # The constructor builds this set from the input, and transforms N,P into a
 # canonical form.  The hash value of grammar objects are hence based on N, T,
 # and P.
 class grammar:
     def utf8map(value):
-        if type(value) == str: return ord(value)
-        elif type(value) == int: return chr(value)
+        if type(value) == str: return terminal(ord(value))
+        elif type(value) == terminal: return chr(value)
         else: raise Exception('Invalid utf8 character')
     def __init__(self, input, start='S', terminal_map=utf8map):
         self.N = set()
@@ -60,14 +63,17 @@ class grammar:
             t.lexer.lineno += 1
             if t.value == '\\\n': return None
             return t
+        ### TODO: replace terminals and non-terminals with symbol container so
+        ### that a symbol can be replaced en-masse with another (and a terminal
+        ### can be replaced with a non-terminal and vice-versa)
         def t_TERMINAL(t):
             r'(".")|(0x[0-9a-f]+)'
             if t.value[0] == '"': t.value = terminal_map(t.value[1])
-            else: t.value = int(t.value[2:], 16)
+            else: t.value = terminal(t.value[2:], 16)
             self.T.add(t.value)
             return t
         def t_NONTERMINAL(t):
-            r'\w[\w-]*'
+            r'[^\W\d][\w-]*'
             self.N.add(t.value)
             return t
         def p_S(p):
@@ -90,13 +96,14 @@ class grammar:
         lexer = lex.lex()
         parser = yacc.yacc()
         parser.parse(input)
+        self.canonical()
     def __repr__(self):
-        P = ''
+        out = ''
         for p in self.P:
-            lhs = ' '.join([ s if type(s) == str else hex(s) for s in p[0] ])
-            rhs = ' '.join([ s if type(s) == str else hex(s) for s in p[1] ])
-            P += lhs + ' = ' + rhs + '\n'
-        return P
+            lhs = ' '.join([ s if type(s) == str else str(s) for s in p[0] ])
+            rhs = ' '.join([ s if type(s) == str else str(s) for s in p[1] ])
+            out += lhs + ' = ' + rhs + '\n'
+        return ''
     # The wiki page on 'Kuroda normal form' mentions that any unrestricted language
     # is weakly equivalent to one where all rules are of the form:
     #   1.  AB = CD
@@ -107,5 +114,13 @@ class grammar:
     # languages, whereas if only rule 1. is ommitted, we gain a normal form for
     # context-free languages.
     def canonical(self):
-        pass
+        # Replace all terminals with non-terminals
+        T = sorted(self.T)
+        T = dict(zip(T, [ "'" + str(t) for t in T ]))
+        for lhs, rhs in self.P:
+            for i in range(len(lhs)):
+                if lhs[i] in T: lhs[i] = T[lhs[i]]
+                if rhs[i] in T: rhs[i] = T[rhs[i]]
+            print(lhs + rhs)
+        # Find all productions in P of the form 1, 2, 3, or 4
 
