@@ -131,7 +131,8 @@ class grammar:
     #       into P.
     #   2.  Replace every production of the form
     #           A_1 ... A_m = B_1 ... B_n
-    #       where n and m satisfy 0 <= n < m, with the following 2 productions
+    #       where n and m satisfy 0 <= n < m and 1 < m, with the following 2
+    #       productions
     #           A_1 ... A_m = B_1 ... B_n {C}^(m-n)
     #           C = ε
     #       and add C into N.
@@ -166,14 +167,42 @@ class grammar:
                 self.symbols.append(s)
                 self.symbols[i] = "'" + str(s)
                 self.P.append(([i], [len(self.symbols)-1]))
-            # Rename non-terminals
-            else: self.symbols[i] = "'" + s
-        # 2.
-        symbol_index = 0
-        def next_symbol():
-            nonlocal symbol_index
-            symbol_index += 1
-            return '_' + str(symbol_index)
-        for i, p in enumerate(self.P[:]):
-            if len(p[0]) >= 2 and len(p[1]) == 1:
-                pass
+        def new_symbol():
+            i = len(self.symbols)
+            self.symbols.append('_' + str(i))
+            return i
+        def new_empty_nonterminal():
+            s = new_symbol()
+            self.P.append(([s], []))
+            return s
+        for p in self.P[:]:
+            # 2.
+            if len(p[0]) > 1 and len(p[0]) > len(p[1]):
+                s = new_empty_nonterminal()
+                p[1].extend([s for _ in range(len(p[0]) - len(p[1]))])
+            # 3.
+            elif len(p[0]) == 1 and len(p[1]) == 1 \
+                and type(self.symbols[p[0][0]]) == str \
+                and type(self.symbols[p[1][0]]) == str:
+                s = new_empty_nonterminal()
+                p[1].append(s)
+            # 4.
+            elif len(p[0]) == 1 and len(p[1]) > 2:
+                s = new_symbol()
+                tail = p[1][1:]
+                p[1][1:] = [s]
+                while tail:
+                    s_new = new_symbol()
+                    self.P.append(([s], [tail[0], s_new]))
+                    tail = tail[1:]
+                    s = s_new
+            # 5.
+            while len(p[0]) > 1 and len(p[1]) > 2:
+                s = new_symbol()
+                taill = p[0][2:]
+                tailr = p[1][1:]
+                del p[0][2:]
+                p[1][1:] = [s]
+                self.P.append(([s] + taill, tailr))
+                p = self.P[-1]
+
