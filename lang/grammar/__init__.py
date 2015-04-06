@@ -37,27 +37,26 @@
 
 from ply import lex, yacc
 
-class terminal(int):
-    pass
-
 # Grammar is determined by G = (N, T, P, S)
 # The constructor builds this set from the input, and transforms N,P into a
 # canonical form.  The hash value of grammar objects are hence based on N, T,
 # and P.
 class grammar:
     def utf8map(value):
-        if type(value) == str: return terminal(ord(value))
-        elif type(value) == terminal: return chr(value)
+        if type(value) == str: return ord(value)
+        elif type(value) == int: return chr(value)
         else: raise Exception('Invalid utf8 character')
-    def __init__(self, input, start='S', terminal_map=utf8map):
-        self.N = set()
-        self.T = set()
+    def __init__(self, input, S='S', terminal_map=utf8map):
         self.P = []
-        self.S = start
+        self.S = S
+        # symbols is the union of N and T
+        self.symbols = [S]
         tokens = ('EMPTYSTRING', 'EQUALS', 'NEWLINE', 'NONTERMINAL', 'TERMINAL')
         t_ignore_space = r'\ +'
         t_EQUALS = r'='
-        t_EMPTYSTRING = r'ε'
+        def t_EMPTYSTRING(t):
+            r'ε'
+            return t
         def t_NEWLINE(t):
             r'\\?\n'
             t.lexer.lineno += 1
@@ -69,12 +68,16 @@ class grammar:
         def t_TERMINAL(t):
             r'(".")|(0x[0-9a-f]+)'
             if t.value[0] == '"': t.value = terminal_map(t.value[1])
-            else: t.value = terminal(t.value[2:], 16)
-            self.T.add(t.value)
+            else: t.value = int(t.value[2:], 16)
+            if t.value not in self.symbols:
+                self.symbols.append(t.value)
+            t.value = self.symbols.index(t.value)
             return t
         def t_NONTERMINAL(t):
             r'[^\W\d][\w-]*'
-            self.N.add(t.value)
+            if t.value not in self.symbols:
+                self.symbols.append(t.value)
+            t.value = self.symbols.index(t.value)
             return t
         def p_S(p):
             '''S : production S
@@ -85,7 +88,8 @@ class grammar:
             '''production : string EQUALS string NEWLINE
                           | string EQUALS EMPTYSTRING NEWLINE'''
             p[0] = (p[1], p[3])
-            self.P.append(p[0])
+            if p[3] == 'ε': p[0] = (p[1],[])
+            if p[0] not in self.P: self.P.append(p[0])
         def p_string(p):
             '''string : NONTERMINAL string
                       | TERMINAL string
@@ -100,10 +104,13 @@ class grammar:
     def __repr__(self):
         out = ''
         for p in self.P:
-            lhs = ' '.join([ s if type(s) == str else str(s) for s in p[0] ])
-            rhs = ' '.join([ s if type(s) == str else str(s) for s in p[1] ])
+            lhs = ' '.join([ self.symbols[i] if type(self.symbols[i]) == str
+                            else str(self.symbols[i]) for i in p[0] ])
+            rhs = ' '.join([ self.symbols[i] if type(self.symbols[i]) == str
+                            else str(self.symbols[i]) for i in p[1] ])
+            if not rhs: rhs = 'ε'
             out += lhs + ' = ' + rhs + '\n'
-        return ''
+        return out
     # The wiki page on 'Kuroda normal form' mentions that any unrestricted language
     # is weakly equivalent to one where all rules are of the form:
     #   1.  AB = CD
@@ -113,14 +120,60 @@ class grammar:
     # If rule type 4. is ommitted, we have a normal form for context-sensitive
     # languages, whereas if only rule 1. is ommitted, we gain a normal form for
     # context-free languages.
+    # To transform into normal form (note: I make a distinction between 'normal'
+    # and 'canonical': canonical form being a unique, deterministic description
+    # of a language, meaning a one-to-one mapping between language <-> canonical
+    # grammar) follow algorithm on page 723 of 'Automata and Languages' by
+    # Alexander Meduna:
+    #   1.  In all productions of P, replace each occurrence of a terminal,
+    #       a ∈ T, with a new non-terminal 'a and add 'a to N. Include
+    #           'a = a
+    #       into P.
+    #   2.  Replace every production of the form
+    #           A_1 ... A_m = B_1 ... B_n
+    #       where n and m satisfy 0 <= n < m, with the following 2 productions
+    #           A_1 ... A_m = B_1 ... B_n {C}^(m-n)
+    #           C = ε
+    #       and add C into N.
+    #   3.  Replace every production of the form
+    #           A = B
+    #       with the following 2 productions
+    #           A = B C
+    #           C = ε
+    #       and add C into N.
+    #   4.  Replace every production of the form
+    #           A = B_1 ... B_n
+    #       where 3 <= n, with the following n-1 productions
+    #           A = B_1 B_2n
+    #           B_2n = B_2 B_3n
+    #               ...
+    #           B_(n-2)n = B_(n-2) B_(n-1)n
+    #           B_(n-1)n = B_(n-1) B_n
+    #       and add the n-2 non-terminals
+    #           B_2n ... B_(n-1)n
+    #       into N.
+    #   5.  Replace every production of the form
+    #           A_1 ... A_m = B_1 ... B_n
+    #       where 2 <= m and 3 <= n, with the following 2 productions
+    #           A_1 A_2 = B_1 C
+    #           C A_3 ... A_m = B_2 ... B_n
+    #       and add C into N.  Repeat step 5 until all productions are in
+    #       normal form.
     def canonical(self):
-        # Replace all terminals with non-terminals
-        T = sorted(self.T)
-        T = dict(zip(T, [ "'" + str(t) for t in T ]))
-        for lhs, rhs in self.P:
-            for i in range(len(lhs)):
-                if lhs[i] in T: lhs[i] = T[lhs[i]]
-                if rhs[i] in T: rhs[i] = T[rhs[i]]
-            print(lhs + rhs)
-        # Find all productions in P of the form 1, 2, 3, or 4
-
+        # 1.
+        for i, s in enumerate(self.symbols[:]):
+            if type(s) == int:
+                self.symbols.append(s)
+                self.symbols[i] = "'" + str(s)
+                self.P.append(([i], [len(self.symbols)-1]))
+            # Rename non-terminals
+            else: self.symbols[i] = "'" + s
+        # 2.
+        symbol_index = 0
+        def next_symbol():
+            nonlocal symbol_index
+            symbol_index += 1
+            return '_' + str(symbol_index)
+        for i, p in enumerate(self.P[:]):
+            if len(p[0]) >= 2 and len(p[1]) == 1:
+                pass

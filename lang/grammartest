@@ -6,6 +6,7 @@ S = production S
 S = newline S
 S = production
 S = newline
+S = ε
   production = string "=" string newline
   production = string "=" empty-string newline
     string = non-terminal string
