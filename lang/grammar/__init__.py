@@ -100,7 +100,7 @@ class grammar:
         lexer = lex.lex()
         parser = yacc.yacc()
         parser.parse(input)
-        self.canonical()
+        self._normalize()
     def __repr__(self):
         out = ''
         for p in self.P:
@@ -160,7 +160,7 @@ class grammar:
     #           C A_3 ... A_m = B_2 ... B_n
     #       and add C into N.  Repeat step 5 until all productions are in
     #       normal form.
-    def canonical(self):
+    def _normalize(self):
         # 1.
         for i, s in enumerate(self.symbols[:]):
             if type(s) == int:
@@ -171,31 +171,29 @@ class grammar:
             i = len(self.symbols)
             self.symbols.append('_' + str(i))
             return i
-        def new_empty_nonterminal():
-            s = new_symbol()
-            self.P.append(([s], []))
-            return s
+        empty_nonterminal = new_symbol()
+        self.P.append(([empty_nonterminal], []))
         for p in self.P[:]:
             # 2.
             if len(p[0]) > 1 and len(p[0]) > len(p[1]):
-                s = new_empty_nonterminal()
-                p[1].extend([s for _ in range(len(p[0]) - len(p[1]))])
+                p[1].extend([empty_nonterminal for _ in range(len(p[0]) - len(p[1]))])
             # 3.
             elif len(p[0]) == 1 and len(p[1]) == 1 \
                 and type(self.symbols[p[0][0]]) == str \
                 and type(self.symbols[p[1][0]]) == str:
-                s = new_empty_nonterminal()
-                p[1].append(s)
+                p[1].append(empty_nonterminal)
             # 4.
             elif len(p[0]) == 1 and len(p[1]) > 2:
                 s = new_symbol()
                 tail = p[1][1:]
                 p[1][1:] = [s]
-                while tail:
+                while len(tail) > 2:
                     s_new = new_symbol()
                     self.P.append(([s], [tail[0], s_new]))
                     tail = tail[1:]
                     s = s_new
+                else:
+                    self.P.append(([s], tail))
             # 5.
             while len(p[0]) > 1 and len(p[1]) > 2:
                 s = new_symbol()
