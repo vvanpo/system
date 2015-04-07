@@ -89,7 +89,8 @@ class grammar:
                           | string EQUALS EMPTYSTRING NEWLINE'''
             p[0] = (p[1], p[3])
             if p[3] == 'ε': p[0] = (p[1],[])
-            if p[0] not in self.P: self.P.append(p[0])
+            if p[0] in self.P: raise Exception('Duplicate production')
+            self.P.append(p[0])
         def p_string(p):
             '''string : NONTERMINAL string
                       | TERMINAL string
@@ -117,16 +118,18 @@ class grammar:
     #   2.  A = BC
     #   3.  A = a
     #   4.  A = ε
-    # If rule type 4. is ommitted, we have a normal form for context-sensitive
-    # languages, whereas if only rule 1. is ommitted, we gain a normal form for
-    # context-free languages.
+    # If rule type 4 is ommitted, we have a normal form for context-sensitive
+    # languages, whereas if only rule type 1 is ommitted, we gain a normal form
+    # for context-free languages.
     # To transform into normal form (note: I make a distinction between 'normal'
     # and 'canonical': canonical form being a unique, deterministic description
     # of a language, meaning a one-to-one mapping between language <-> canonical
     # grammar) follow algorithm on page 723 of 'Automata and Languages' by
     # Alexander Meduna:
-    #   1.  In all productions of P, replace each occurrence of a terminal,
-    #       a ∈ T, with a new non-terminal 'a and add 'a to N. Include
+    #   1.  In productions not of the form
+    #           A = a
+    #       where a ∈ T and A ∈ N, replace each occurrence of a terminal with a
+    #       new non-terminal 'a and add 'a to N. Include
     #           'a = a
     #       into P.
     #   2.  Replace every production of the form
@@ -161,26 +164,30 @@ class grammar:
     #       and add C into N.  Repeat step 5 until all productions are in
     #       normal form.
     def _normalize(self):
-        # 1.
-        for i, s in enumerate(self.symbols[:]):
-            if type(s) == int:
-                self.symbols.append(s)
-                self.symbols[i] = "'" + str(s)
-                self.P.append(([i], [len(self.symbols)-1]))
         def new_symbol():
             i = len(self.symbols)
             self.symbols.append('_' + str(i))
             return i
         empty_nonterminal = new_symbol()
         self.P.append(([empty_nonterminal], []))
+        terminals = {}
         for p in self.P[:]:
+            # 1.
+            if len(p[0]) == 1 and type(self.symbols[p[0][0]]) == str \
+                    and len(p[1]) == 1  and type(self.symbols[p[1][0]]) == int:
+                continue
+            for l in p:
+                for i, s in enumerate(l):
+                    if type(self.symbols[s]) == int:
+                        if s in terminals: l[i] = terminals[s]
+                        else:
+                            l[i] = terminals[s] = new_symbol()
+                            self.P.append(([terminals[s]], [s]))
             # 2.
             if len(p[0]) > 1 and len(p[0]) > len(p[1]):
                 p[1].extend([empty_nonterminal for _ in range(len(p[0]) - len(p[1]))])
             # 3.
-            elif len(p[0]) == 1 and len(p[1]) == 1 \
-                and type(self.symbols[p[0][0]]) == str \
-                and type(self.symbols[p[1][0]]) == str:
+            elif len(p[0]) == 1 and len(p[1]) == 1:
                 p[1].append(empty_nonterminal)
             # 4.
             elif len(p[0]) == 1 and len(p[1]) > 2:

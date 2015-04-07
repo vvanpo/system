@@ -6,7 +6,6 @@ S = production S
 S = newline S
 S = production
 S = newline
-S = ε
   production = string "=" string newline
   production = string "=" empty-string newline
     string = non-terminal string
@@ -19,21 +18,12 @@ S = ε
       non-terminal = "d"
       non-terminal = "e"
       non-terminal = "f"
-      non-terminal = "a"
+      non-terminal = "h"
+      non-terminal = "i"
       terminal = 0x22 printable-character 0x22
     empty-string = 0x3b5
     newline = 0xa newline
     newline = 0xa
 ''')
 
-eg8311 = grammar.grammar('''
-S = C A 0x0 D
-A 0x0 = 0x0 0x0 A
-A D = B D
-0x0 B = B 0x0
-C B = C A
-C A = A
-A D = ε
-''')
-
-print(eg8311)
+print(g)
