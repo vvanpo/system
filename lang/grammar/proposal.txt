@@ -3,8 +3,8 @@ Grammar module:
 1   The module accepts an input string conforming to a grammar notation, and
     returns a grammar object.
     1.1 Grammar notation allows for expression of any unrestricted grammar
-        (unlike BNF), and has various optional shorthands to simply description
-        (think EBNF, but with shorthands for non-CFG grammars too).
+        (unlike BNF), and has various optional shorthands to simplify
+        description (think EBNF, but with shorthands for non-CFG grammars too).
         E.g. alternatives ('|'), ordered alternatives ('||'), optionals ('?'),
             zero-or-more ('*'), one-or-more ('+'), grouping ('()'), m-to-n
             ('{m,n}'), back-references ('/#'), look-ahead/look-behind, etc.

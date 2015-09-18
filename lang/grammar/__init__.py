@@ -38,6 +38,10 @@
 from ply import lex, yacc
 
 # Grammar is determined by G = (N, T, P, S)
+#   N is the set of non-terminals
+#   T is the set of terminals
+#   P is the set productions
+#   S is the start symbol
 # The constructor builds this set from the input, and transforms N,P into a
 # canonical form.  The hash value of grammar objects are hence based on N, T,
 # and P.
