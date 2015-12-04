@@ -11,15 +11,6 @@ item1
       - item2.value1.item2.item2
 key3: value3
 
-People:
-  - &attrs
-        [name, birth-name, nick-names, birth-date, birth-place] 
-  - *attrs <<< [Victor van Poppelen, , , 1991-02-14, "Houten, NL"]
-  - name:           Alexander van Poppelen
-    birthdate:      1989-07-29
-    birthplace:     Nieuwegein, The Netherlands
-  - *attrs <<< [Jacqueline de Bruin, Jacqueline van Poppelen,
-        [ Jackie, Jacko, Jackie Brown ], 1985-09-07]
 ——
   
 """)
