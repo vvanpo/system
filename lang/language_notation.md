@@ -5,7 +5,7 @@ Example - UTF-8
 
 byte = {0,…,ff₁₆}
 
-bytestream = {
+bytestream = {(b₁,…,bₙ) ∈ byteⁿ | n ∈ ℕ}
 
 𝕌 = {0,…,14fff₁₆,16000₁₆,…,18fff₁₆,1b000₁₆,…,1bfff₁₆,1d000₁₆,…,2cfff₁₆,2f000₁₆,…,2ffff₁₆,e0000₁₆,…,e0fff₁₆} # the set of all unicode code points
 
